@@ -98,16 +98,16 @@ int startServer(char * addr, int port)
 
 		printf("Sum is %d\n", result);
 		sprintf(buff, "%d", result);
-		int send = write(socketNum, buff, sizeof(buff) );
+		int send = write(recvDs, buff, sizeof(buff) );
 
 		if(send < 0)
 		{
-			//perror("Odpowiedz blad:");
+			perror("Odpowiedz blad:");
 			//a = 0;
 			//close(recvDs);
 		}else
 		{
-			printf("Send bytes: %d\n", send);
+			printf("bytes sent: %d\n", send);
 		}
 	}
 
