@@ -8,6 +8,20 @@
 #include <string.h>
 #include <stdlib.h>
 
+/*
+	RFC
+	https://tools.ietf.org/html/rfc959
+
+	Methods to implement:
+		ascii
+		binary
+		mkdir
+		rmdir
+		put
+		get
+
+*/
+
 #define BUFFER_SIZE 1000
 #define MAX_NUMBERS_TO_PARSE 10
 void parseReceivedData(char *receivedData, int *numbers, int *numbersSize);
