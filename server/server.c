@@ -7,10 +7,17 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
+#include <pthread.h>
+
+#define BUFFER_SIZE 1000
+#define MAX_NUMBERS_TO_PARSE 10
+#define QUEUE_SIZE 5
 
 /*
 	RFC
 	https://tools.ietf.org/html/rfc959
+	http://www.cs.put.poznan.pl/mboron/prez/zasady_projektow.pdf
 
 	Methods to implement:
 		ascii
@@ -22,12 +29,22 @@
 
 */
 
-#define BUFFER_SIZE 1000
-#define MAX_NUMBERS_TO_PARSE 10
+
+
 void parseReceivedData(char *receivedData, int *numbers, int *numbersSize);
 int sumReceivedData(int *numbers, int numbersSize);
 int startServer(char * addr, int port);
+void *ThreadBehavior(void *t_data);
+void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remote);
+int sendData(int socketNum, char *message);
 
+
+//struktura zawierająca dane, które zostaną przekazane do wątku
+struct thread_data_t
+{
+    int socektDescriptor;
+    struct sockaddr_in *remote;
+};
 
 
 int main(int argc, char *argv[])
@@ -76,58 +93,118 @@ int startServer(char * addr, int port)
 	inet_pton(AF_INET, addr, &sockAddr.sin_addr);
 	sockAddr.sin_port = htons(port);
 	sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	//bindowanie do socketu
+	int time = 1;
+	setsockopt(socketNum, SOL_SOCKET, SO_REUSEADDR, (char*)&time, sizeof(time));
 	if(bind(socketNum, (struct sockaddr *) &sockAddr, sizeof(sockAddr)) < 0)
 	{
 		perror("Binding blad:");
 		return -1;
 	}
-	int time = 1;
-	setsockopt(socketNum, SOL_SOCKET, SO_REUSEADDR, (char*)&time, sizeof(time));
-	if(listen(socketNum, 100) < 0)
+
+
+
+	if(listen(socketNum, QUEUE_SIZE) < 0)
 	{
 		perror("Blad listen:");
 		return -1;
 	}
-	int sock = sizeof(struct sockaddr);
+	
+	int sockSize = sizeof(struct sockaddr);
 
-	int a = 1;
+	int runserver = 1;
 
-	while(a > 0)
+	while(runserver > 0)
 	{
-		int recvDs = accept(socketNum, (struct sockaddr *) &remote, &sock);
-		if(recvDs< 0)
+		int connection_descriptor = accept(socketNum, (struct sockaddr *) &remote, &sockSize);
+		if(connection_descriptor < 0)
 		{
-			perror("Accept error");
+			perror("Accept client error");
+			runserver = 0;
+			continue;
 		}
 
-		int readBytes = read(recvDs, buff, BUFFER_SIZE);
+		int readBytes = read(connection_descriptor, buff, BUFFER_SIZE);
 		char remoteAddr[INET_ADDRSTRLEN];
 		inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
-		int remotePort = 2;//ntohs(remote.sin_port);
-		printf("Text:%s. from: %s:%d, read bytes: %d\n", buff, remoteAddr, remotePort, readBytes);	 
-		int numbers[MAX_NUMBERS_TO_PARSE],numbersSize ;
-		parseReceivedData(buff, numbers, &numbersSize);
-
-		int result = sumReceivedData(numbers, numbersSize);
-
-		printf("Sum is %d\n", result);
-		sprintf(buff, "%d", result);
-		int send = write(recvDs, buff, sizeof(buff) );
-
-		if(send < 0)
-		{
-			perror("Odpowiedz blad:");
-			//a = 0;
-			//close(recvDs);
-		}else
-		{
-			printf("bytes sent: %d\n", send);
-		}
+		//		int remotePort = 2;//ntohs(remote.sin_port);
+		printf("Client %s connected. Assigned socket %d\n", remoteAddr, connection_descriptor);	 
+		
+		handleConnection(connection_descriptor, &remote);
 	}
 
 	close(socketNum);
     return 0;
 
+
+}
+//funkcja obsługująca połączenie z nowym klientem
+void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remote ) {
+    //wynik funkcji tworzącej wątek
+    int create_result = 0;
+
+    //uchwyt na wątek
+    pthread_t thread1;
+
+    //dane, które zostaną przekazane do wątku
+    //TODO dynamiczne utworzenie instancji struktury thread_data_t o 
+    //	nazwie t_data (+ w odpowiednim miejscu zwolnienie pamięci)
+    //TODO wypełnienie pól struktury
+    struct thread_data_t *t_data;
+    t_data = malloc((sizeof(struct thread_data_t)));
+    t_data->socektDescriptor = connection_socket_descriptor;
+    t_data->remote = remote;
+
+    char buffor[BUFFER_SIZE];
+
+    //tworzy watek dla nowego klienta
+    create_result = pthread_create(&thread1, NULL, ThreadBehavior, (void *)t_data);
+    if (create_result){
+       printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", create_result);
+       exit(-1);
+    }
+    else
+    {
+    	printf("Creating thread success\n");
+    }
+
+}
+
+//funkcja opisującą zachowanie wątku - musi przyjmować argument typu (void *) i zwracać (void *)
+void *ThreadBehavior(void *t_data)
+{
+    pthread_detach(pthread_self());
+    struct thread_data_t *th_data = (struct thread_data_t*)t_data;
+
+    char remoteAddr[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &(th_data->remote->sin_addr), remoteAddr, INET_ADDRSTRLEN);
+
+	printf("Listener for %s created!\n", remoteAddr);
+	char buffer[BUFFER_SIZE];
+	int keepConnection = 1;
+	while(keepConnection > 0)
+	{
+		if(read(th_data->socektDescriptor, buffer, BUFFER_SIZE) > 0)
+		{
+			printf("Received data from %s: %s\n", remoteAddr, buffer);
+			sendData(th_data->socektDescriptor, "data");
+		}
+	}
+    //dostęp do pól struktury: (*th_data).pole
+    //TODO (przy zadaniu 1) klawiatura -> wysyłanie albo odbieranie -> wyświetlanie
+    printf("Thread created. Socket number is %d, addrs %s\n", th_data->socektDescriptor, remoteAddr);
+    pthread_exit(NULL);
+}
+
+int sendData(int socketNum, char *message)
+{
+	printf("data to send %s\n");
+	char dataToSend[20];
+	sprintf(dataToSend, "%s",message);
+
+	return write(socketNum, message, sizeof(dataToSend));
+//	printf("Send:%s.\nserver: %s, port: %d.\n%d %d\n", dataToSend, addr, port, dataSend, sizeof(dataToSend));	
 
 }
 

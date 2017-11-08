@@ -1,3 +1,3 @@
-CXXFLAGS: -Wall
+CFLAGS = -Wall -pthread
 server: server.c
-	gcc $(CXXFLAGS) -o server server.c
+	gcc $(CFLAGS) -o server server.c
