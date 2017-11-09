@@ -5,11 +5,13 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.text.Font;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.Buffer;
+import java.nio.file.*;
 
 public class MainScene {
     @FXML
@@ -46,6 +48,7 @@ public class MainScene {
             InputStream in  = client.getInputStream();
             if(in.available() > 0)
             {
+                System.out.println(in.available());
                 in.read(buff);
                 connectionStatus.setText("OK");
             }else
@@ -59,7 +62,35 @@ public class MainScene {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
-
+        try{
+            listDirectoryFiles("test");
+        }catch(RuntimeException e)
+        {
+            System.out.println(e.getMessage());
+        }
     }
+
+    public final String rootDir = "ftp_client_root_dir\\";
+
+    private void listDirectoryFiles(String directory)
+            throws RuntimeException
+    {
+
+        File dir = new File(rootDir + directory);
+        System.out.println(dir.getAbsolutePath());
+        if(!dir.exists() || !dir.isDirectory())
+            throw new RuntimeException("Podana ścieżka nie jest folderem");
+        Path path = Paths.get(dir.getAbsolutePath());
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)) {
+            for (Path file: stream) {
+                System.out.println(file.getFileName());
+            }
+        } catch (IOException | DirectoryIteratorException x) {
+            // IOException can never be thrown by the iteration.
+            // In this snippet, it can only be thrown by newDirectoryStream.
+            System.err.println(x);
+        }
+    }
+
+
 }
