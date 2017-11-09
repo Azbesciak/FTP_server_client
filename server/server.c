@@ -27,6 +27,10 @@
 		put
 		get
 
+	Dopisać odbieranie i wysyłanie danych - binarnie i tekstowo.
+	Dekodowanie poleceń ( + obsługa nieznanych poleceń - do tego też odpowiednia odpowiedź dla klienta) i formułowanie odpowiedzi.
+
+
 */
 
 
