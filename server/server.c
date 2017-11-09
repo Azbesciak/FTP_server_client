@@ -130,7 +130,7 @@ int startServer(char * addr, int port)
 		inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
 		//		int remotePort = 2;//ntohs(remote.sin_port);
 		printf("Client %s connected. Assigned socket %d\n", remoteAddr, connection_descriptor);	 
-		
+		sendData(connection_descriptor, "OK");
 		handleConnection(connection_descriptor, &remote);
 	}
 
