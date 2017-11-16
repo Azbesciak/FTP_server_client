@@ -14,6 +14,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -59,14 +60,12 @@ public class MainScene {
         try {
             client = new Socket("127.0.0.1", 10001);
             //client = new Socket(serverAddress.getText() , Integer.valueOf(portNumber.getText()));
-            client = new Socket("150.254.32.67", 10001);
             OutputStream out = client.getOutputStream();
-            //out.write("12;3".getBytes());
-            System.out.println("wysłano");
+
 
             //waits for response
             String path = "test.bin";
-            out.write("Request: RETR test.bin".getBytes());
+            out.write("Request: RETR test.bin\n\r".getBytes());
 
             FileOutputStream stream = new FileOutputStream(path);
             //odpowiedz
@@ -78,11 +77,11 @@ public class MainScene {
                     boolean binaryMode = false;
                     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
 
-                    String serverMessage = reader.readLine();
-                    System.out.println("bytes received " + in.available());
-                    System.out.println("data received " + serverMessage);
+                    //String serverMessage = reader.readLine();
+                  //  System.out.println("bytes received " + in.available());
+                  //  System.out.println("data received " + serverMessage);
 
-                    /*
+
                     Arrays.fill(buff, (byte) 0);
                     in.read(buff);
 
@@ -96,12 +95,12 @@ public class MainScene {
                     {
                         System.out.println("Saving stream");
                         stream.write(buff);
-
+                        break;
                     }
 
                     System.out.println("Received data: " + new String(buff, StandardCharsets.UTF_8));
 
-*/
+
                 }
             }
 
