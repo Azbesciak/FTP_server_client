@@ -1,7 +1,11 @@
 package sample;
 
+import javafx.collections.ObservableList;
+import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.event.EventHandler;
+import javafx.scene.control.cell.TextFieldTreeCell;
 
 import java.io.*;
 import java.lang.reflect.Array;
@@ -9,26 +13,32 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.util.Arrays;
+import java.util.List;
 
 
 public class MainScene {
+    public TextField serverAddress;
+    public TextField portNumber;
     @FXML
-    private TreeView files;
+    public TreeView files;
     @FXML
     private Button connect;
     @FXML
     private Label connectionStatus;
-
     @FXML
 
 
-    private void initialize() {
+    private void initialize()
+    {
+       // files.setEditable(true);
+       // files.setCellFactory(TextFieldTreeCell.forTreeView());
+        files.setRoot(getRootDir());
         listFiles();
     }
 
 
-    public MainScene() {
+    public MainScene()
+    {
 
     }
 
@@ -37,6 +47,8 @@ public class MainScene {
         Socket client = null;
         try {
             client = new Socket("127.0.0.1", 10001);
+            //client = new Socket(serverAddress.getText() , Integer.valueOf(portNumber.getText()));
+            client = new Socket("150.254.32.67", 10001);
             OutputStream out = client.getOutputStream();
             //out.write("12;3".getBytes());
             System.out.println("wysłano");
@@ -120,19 +132,41 @@ public class MainScene {
 
     private void listFiles() {
 
-        files.setRoot(getRoot());
+        files.getRoot().addEventHandler(TreeItem.branchExpandedEvent(), new EventHandler() {
+
+            public void handle(Event e) {
+                TreeItem<File> expanded= (TreeItem<File>) e.getSource();
+                ObservableList<TreeItem<File>> files = expanded.getChildren();
+
+                for (TreeItem<File> f : files) {
+                    File[] listOfFiles = f.getValue().listFiles();
+                    if (listOfFiles != null) {
+                        for (File file : listOfFiles) {
+                            //   if (file.isFile()) {
+                          //  TreeItem<File>fil = new TreeItem<File>(file);
+                          //  fil.valueProperty().;
+                            f.getChildren().add(new TreeItem<File>(file));
+                            //  }
+                        }
+                    }
+                }
+            }
+        });
     }
 
 
-    private TreeItem<String> getRoot() {
-        TreeItem<String> root = new TreeItem<String>("Root Node");
-        root.setExpanded(true);
-        root.getChildren().addAll(
-                new TreeItem<String>("Item 1"),
-                new TreeItem<String>("Item 2"),
-                new TreeItem<String>("Item 3"));
+
+    private TreeItem<File> getRootDir()
+    {
+        TreeItem<File> root = new TreeItem<File>(new File("LocalComputer"));
+        Iterable<Path> rootDirectories=FileSystems.getDefault().getRootDirectories();
+        for(Path name:rootDirectories) {
+
+            TreeItem<File> treeNode = new TreeItem<File>(new File(name.toString()));
+
+            root.getChildren().add(treeNode);
+        }
+         root.setExpanded(false);
         return root;
     }
-
-
 }
