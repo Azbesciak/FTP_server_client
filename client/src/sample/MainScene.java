@@ -6,6 +6,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.event.EventHandler;
 import javafx.scene.control.cell.TextFieldTreeCell;
+import javafx.scene.input.MouseEvent;
 
 import java.io.*;
 import java.lang.reflect.Array;
@@ -33,6 +34,16 @@ public class MainScene {
        // files.setEditable(true);
        // files.setCellFactory(TextFieldTreeCell.forTreeView());
         files.setRoot(getRootDir());
+        files.setOnMouseClicked(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                if(event.getClickCount() == 2)
+                {
+                    ObservableList<TreeItem<File>> file = files.getSelectionModel().getSelectedItems();
+                    System.out.println(file.get(0).getValue());
+                }
+            }
+        });
         listFiles();
     }
 
