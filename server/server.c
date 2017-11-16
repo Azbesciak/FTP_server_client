@@ -32,35 +32,31 @@
 
 
 */
-typedef void (* action)(int);
+typedef void (* CommandAction)(int);
 
 
-action * parseReceivedData(char *receivedData);
+//returns action appropriate to client's command
+CommandAction * parseReceivedData(char *receivedData);	
 int checkCommand(char *data, char *command);
 int sumReceivedData(int *numbers, int numbersSize);
 int startServer(char * addr, int port);
 void *ThreadBehavior(void *t_data);
 void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remote);
-int sendData(int socketNum, char *message);
+int sendData2(int socketNum, char *message);
+int sendData(int socketNum, char *message, int messageSize);
+int readFile(char *filename, char * buffer, long *bufferSize);
 
 
 //struktura zawierająca dane, które zostaną przekazane do wątku
 struct thread_data_t
 {
-    int socektDescriptor;
+    int socketDescriptor;
     struct sockaddr_in *remote;
 };
 
 
 int main(int argc, char *argv[])
 {
-
-	action * commandAction =  parseReceivedData("CWD");
-	if(commandAction != NULL)
-		(*commandAction)("");
-	else
-		printf("No action defined\n");
-	return;
 	if(argc == 1)
 	{
 		startServer("127.0.0.1", 10001);		
@@ -87,8 +83,8 @@ int main(int argc, char *argv[])
 //strtok - rozbija string z delimiterem
 int startServer(char * addr, int port)
 {
-	printf("Server: %s:%d\n", addr, port);
-	char buff[BUFFER_SIZE];
+	printf("Server is running: %s:%d\n", addr, port);
+
 	struct sockaddr_in sockAddr, remote;
 	
         int socketNum = socket(AF_INET, SOCK_STREAM, 0);
@@ -129,19 +125,19 @@ int startServer(char * addr, int port)
 	while(runserver > 0)
 	{
 		int connection_descriptor = accept(socketNum, (struct sockaddr *) &remote, &sockSize);
+		//printf("Connection descriptor %d\n", connection_descriptor);
 		if(connection_descriptor < 0)
 		{
-			perror("Accept client error");
+			perror("Client accepting error");
 			runserver = 0;
 			continue;
 		}
+		sendData(connection_descriptor, "220: Hello world\n\r", 30);
 
-		int readBytes = read(connection_descriptor, buff, BUFFER_SIZE);
 		char remoteAddr[INET_ADDRSTRLEN];
 		inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
 		//		int remotePort = 2;//ntohs(remote.sin_port);
 		printf("Client %s connected. Assigned socket %d\n", remoteAddr, connection_descriptor);	 
-		sendData(connection_descriptor, "OK");
 		handleConnection(connection_descriptor, &remote);
 	}
 
@@ -163,15 +159,13 @@ void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remo
     //	nazwie t_data (+ w odpowiednim miejscu zwolnienie pamięci)
     //TODO wypełnienie pól struktury
     struct thread_data_t *t_data;
-    t_data = malloc((sizeof(struct thread_data_t)));
-    t_data->socektDescriptor = connection_socket_descriptor;
+    t_data = malloc((sizeof(struct thread_data_t)));	
+    t_data->socketDescriptor = connection_socket_descriptor;
     t_data->remote = remote;
-
-    char buffor[BUFFER_SIZE];
 
     //tworzy watek dla nowego klienta
     create_result = pthread_create(&thread1, NULL, ThreadBehavior, (void *)t_data);
-    if (create_result){
+    if (create_result != 0){
        printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", create_result);
        exit(-1);
     }
@@ -191,35 +185,86 @@ void *ThreadBehavior(void *t_data)
     char remoteAddr[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, &(th_data->remote->sin_addr), remoteAddr, INET_ADDRSTRLEN);
 
-	printf("Listener for %s created!\n", remoteAddr);
+	printf("Thread created. Socket number is %d, addrs %s\n", th_data->socketDescriptor, remoteAddr);
+
+
 	char buffer[BUFFER_SIZE];
 	int keepConnection = 1;
+	int sendExit = 1;
 	while(keepConnection > 0)
 	{
-		if(read(th_data->socektDescriptor, buffer, BUFFER_SIZE) > 0)
+		int value = read(th_data->socketDescriptor, buffer, BUFFER_SIZE);
+		if(value > 0)
 		{
+			if(sendExit > 0)
+			{
+				write(th_data->socketDescriptor, (char)-1, 1);
+				printf("disconnected from client\n\n");
+				keepConnection = 0;
+				continue;
+			}
 			printf("Received data from %s: %s\n", remoteAddr, buffer);
-			sendData(th_data->socektDescriptor, "data");
+
+			char *buffer = NULL;
+			char * filename = "file.bin";
+			long bufferSize = 0;
+			if(readFile(filename, buffer, &bufferSize))
+			{
+				printf("File, read %ld bytes.\n", bufferSize);
+
+				//buffer[0] = buffer[1] = buffer[2] = buffer[3] = (char)0;
+				//printf("Buffer[0] >%d<\n", buffer[0]);
+				sendData(th_data->socketDescriptor, buffer, 100);
+			}else
+			{
+				perror("Unable to read file");
+				return 0;
+
+			}
+			//CommandAction * commandAction =  parseReceivedData("CWD");
+			//if(commandAction != NULL)
+		//		(*commandAction)("");
+		//	else
+		//		printf("No action defined\n");
+
+			//sendData(th_data->socketDescriptor, "data");
+		}else if(value == 0)
+		{
+				printf("Client %s disconnected.\n", remoteAddr);
+				keepConnection = 0;
+				continue;
+		}else
+		{
+			printf("Undefined behaviour\n");
 		}
+		sleep(200);
+		sendExit = 1;
+		
 	}
-    //dostęp do pól struktury: (*th_data).pole
-    //TODO (przy zadaniu 1) klawiatura -> wysyłanie albo odbieranie -> wyświetlanie
-    printf("Thread created. Socket number is %d, addrs %s\n", th_data->socektDescriptor, remoteAddr);
     pthread_exit(NULL);
 }
 
-int sendData(int socketNum, char *message)
+int sendData2(int socketNum, char *message)
 {
-	printf("data to send %s\n");
-	char dataToSend[20];
-	sprintf(dataToSend, "%s",message);
+	return sendData(socketNum, message, 100);
+}
 
-	return write(socketNum, message, sizeof(dataToSend));
-//	printf("Send:%s.\nserver: %s, port: %d.\n%d %d\n", dataToSend, addr, port, dataSend, sizeof(dataToSend));	
+int sendData(int socketNum, char *message, int messageSize)
+{
+	//printf("data to send %s\n");
+	//char dataToSend[100];
+	//sprintf(dataToSend, "%s",message);
+	int value = write(socketNum, message, messageSize*sizeof(char));
+	if(value < 0)
+	{
+		printf("Error when sending data %s\n", &message);
+		perror("Couldnt send data");
+	}
+	return value;
 
 }
 
-action * parseReceivedData(char *receivedData)
+CommandAction * parseReceivedData(char *receivedData)
 {
 	if(checkCommand(receivedData, "CWD") > -1)
 	{
@@ -241,3 +286,46 @@ int checkCommand(char *data, char *command)
 	return 0;
 }
 
+void saveFile(char *filename)
+{
+	int counter;
+	FILE *ptr_myfile;
+	ptr_myfile=fopen(filename,"wb");
+	if (!ptr_myfile)
+	{
+		printf("Unable to open file!");
+		return;
+	}
+	for ( counter=0; counter < 100; counter++)
+	{
+		printf("writing %d\n", counter);
+		fwrite(&counter, sizeof(int), 1, ptr_myfile);
+	}
+	fclose(ptr_myfile);
+
+}
+
+int readFile(char *filename, char * buffer, long *bufferSize)
+{
+	FILE *ptr_myfile;
+
+	ptr_myfile=fopen(filename,"rb");
+	if(!ptr_myfile)
+	{
+		return 0;
+	}
+
+	//get flie size
+	fseek(ptr_myfile, 0, SEEK_END);
+	long filelen = ftell(ptr_myfile);
+	rewind(ptr_myfile);
+
+
+	buffer = (char *)malloc((filelen+1)*sizeof(char));
+	fread(buffer, filelen, 1, ptr_myfile);
+	*bufferSize = filelen;
+
+	fclose(ptr_myfile);
+
+	return 1;
+}
