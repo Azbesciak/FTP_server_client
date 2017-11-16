@@ -1,27 +1,29 @@
 package sample;
 
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.text.Font;
+import javafx.scene.control.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.nio.Buffer;
 import java.nio.file.*;
 
+
 public class MainScene {
+    @FXML
+    private TreeView files;
     @FXML
     private Button connect;
     @FXML
     private Label connectionStatus;
     @FXML
+
+
     private void initialize()
     {
-
+        listFiles();
     }
 
 
@@ -34,7 +36,7 @@ public class MainScene {
     private void connectWithServer() {
         Socket client = null;
         try {
-            client = new Socket("127.0.0.1", 10001);
+            client = new Socket("150.254.32.67", 10001);
             OutputStream out = client.getOutputStream();
             out.write("12;3".getBytes());
             System.out.println("wysłano");
@@ -50,9 +52,9 @@ public class MainScene {
             {
                 System.out.println(in.available());
                 in.read(buff);
-                connectionStatus.setText("OK");
+             //   connectionStatus.setText("OK");
             }else
-                connectionStatus.setText("Brak połączenia");
+             //   connectionStatus.setText("Brak połączenia");
 
             client.close();
 
@@ -91,6 +93,27 @@ public class MainScene {
             System.err.println(x);
         }
     }
+
+    private void listFiles()
+    {
+
+        files.setRoot(getRoot());
+    }
+
+
+
+    private TreeItem<String> getRoot()
+    {
+        TreeItem<String> root = new TreeItem<String>("Root Node");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<String>("Item 1"),
+                new TreeItem<String>("Item 2"),
+                new TreeItem<String>("Item 3"));
+        return root;
+    }
+
+
 
 
 }
