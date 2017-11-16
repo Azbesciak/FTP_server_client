@@ -32,10 +32,11 @@
 
 
 */
+typedef void (* action)(int);
 
 
-
-void parseReceivedData(char *receivedData, int *numbers, int *numbersSize);
+action * parseReceivedData(char *receivedData);
+int checkCommand(char *data, char *command);
 int sumReceivedData(int *numbers, int numbersSize);
 int startServer(char * addr, int port);
 void *ThreadBehavior(void *t_data);
@@ -53,6 +54,13 @@ struct thread_data_t
 
 int main(int argc, char *argv[])
 {
+
+	action * commandAction =  parseReceivedData("CWD");
+	if(commandAction != NULL)
+		(*commandAction)("");
+	else
+		printf("No action defined\n");
+	return;
 	if(argc == 1)
 	{
 		startServer("127.0.0.1", 10001);		
@@ -71,7 +79,6 @@ int main(int argc, char *argv[])
 		printf("Argc error");
 
 	}
-
 		
 	return 0;
 }
@@ -212,25 +219,25 @@ int sendData(int socketNum, char *message)
 
 }
 
-void parseReceivedData(char *receivedData, int *numbers, int *numbersSize)
+action * parseReceivedData(char *receivedData)
 {
-	*numbersSize = 0;
-	int iter = 0;
-	char *str = strtok(receivedData, ";");
-	while(str != NULL && iter < MAX_NUMBERS_TO_PARSE)
+	if(checkCommand(receivedData, "CWD") > -1)
 	{
-		numbers[iter] = atoi(str);
-		iter++;
-		str = strtok(NULL, ";");
+		printf("CWD command\n");
+	} else if(checkCommand(receivedData, "PWD") > -1)
+	{
+		printf("PWD command\n");
+	} else
+	{
+		printf("Invalid command\n");
 	}
-	*numbersSize = iter;
+	return NULL;
 }
-int sumReceivedData(int *numbers, int numbersSize)
+
+int checkCommand(char *data, char *command)
 {
-	int result = 0;
-	for(int i=0; i<numbersSize;i++)
-	{
-		result += numbers[i];
-	}
-	return result;
+	if(strstr(data, command) == NULL)
+		return -1;
+	return 0;
 }
+
