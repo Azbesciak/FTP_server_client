@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
+#include <dirent.h>
 
 #define BUFFER_SIZE 1000
 #define MAX_NUMBERS_TO_PARSE 10
@@ -45,7 +46,7 @@ void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remo
 int sendData2(int socketNum, char *message);
 int sendData(int socketNum, char *message, int messageSize);
 int readFile(char *filename, char * buffer, long *bufferSize);
-
+void listFiles();
 
 //struktura zawierająca dane, które zostaną przekazane do wątku
 struct thread_data_t
@@ -57,9 +58,11 @@ struct thread_data_t
 
 int main(int argc, char *argv[])
 {
+	listFiles();
+	return;
 	if(argc == 1)
 	{
-		startServer("127.0.0.1", 10001);		
+		startServer("127.0.0.1", 21);		
 	}
 	else if(argc == 2)
 	{
@@ -132,7 +135,7 @@ int startServer(char * addr, int port)
 			runserver = 0;
 			continue;
 		}
-		sendData(connection_descriptor, "220: Hello world\n\r", 30);
+		//sendData(connection_descriptor, "220: Hello world\n\r", 30);
 
 		char remoteAddr[INET_ADDRSTRLEN];
 		inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
@@ -190,7 +193,7 @@ void *ThreadBehavior(void *t_data)
 
 	char buffer[BUFFER_SIZE];
 	int keepConnection = 1;
-	int sendExit = 1;
+	int sendExit = 0;
 	while(keepConnection > 0)
 	{
 		int value = read(th_data->socketDescriptor, buffer, BUFFER_SIZE);
@@ -211,7 +214,7 @@ void *ThreadBehavior(void *t_data)
 			if(readFile(filename, buffer, &bufferSize))
 			{
 				printf("File, read %ld bytes.\n", bufferSize);
-
+				buffer = "asdasd";
 				//buffer[0] = buffer[1] = buffer[2] = buffer[3] = (char)0;
 				//printf("Buffer[0] >%d<\n", buffer[0]);
 				sendData(th_data->socketDescriptor, buffer, 100);
@@ -228,7 +231,7 @@ void *ThreadBehavior(void *t_data)
 		//		printf("No action defined\n");
 
 			//sendData(th_data->socketDescriptor, "data");
-		}else if(value == 0)
+		}else if(buffer[0] == 0)
 		{
 				printf("Client %s disconnected.\n", remoteAddr);
 				keepConnection = 0;
@@ -244,21 +247,17 @@ void *ThreadBehavior(void *t_data)
     pthread_exit(NULL);
 }
 
-int sendData2(int socketNum, char *message)
-{
-	return sendData(socketNum, message, 100);
-}
 
 int sendData(int socketNum, char *message, int messageSize)
 {
-	//printf("data to send %s\n");
-	//char dataToSend[100];
-	//sprintf(dataToSend, "%s",message);
-	int value = write(socketNum, message, messageSize*sizeof(char));
+	int value = write(socketNum, message, strlen(message));
 	if(value < 0)
 	{
 		printf("Error when sending data %s\n", &message);
 		perror("Couldnt send data");
+	}else
+	{
+		printf("Send %dbytes.\n", value);
 	}
 	return value;
 
@@ -328,4 +327,21 @@ int readFile(char *filename, char * buffer, long *bufferSize)
 	fclose(ptr_myfile);
 
 	return 1;
+}
+
+void listFiles()
+{
+	DIR *dir;
+	struct dirent *ent;
+	if ((dir = opendir ("\\")) != NULL) {
+  		/* print all the files and directories within directory */
+  	while ((ent = readdir (dir)) != NULL) {
+    	printf ("%s\n", ent->d_name);
+  	}
+  	closedir (dir);
+	} else {
+  		/* could not open directory */
+  		perror ("Directory error");
+  		//return EXIT_FAILURE;
+	}
 }
