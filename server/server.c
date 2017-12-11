@@ -14,7 +14,7 @@
 #define BUFFER_SIZE 1000
 #define MAX_NUMBERS_TO_PARSE 10
 #define QUEUE_SIZE 5
-
+#define FILTER_NOT_ALLOWED_FILES 4
 /*
 	RFC
 	https://tools.ietf.org/html/rfc959
@@ -248,7 +248,7 @@ void *ThreadBehavior(void *t_data)
 }
 
 
-int sendData(int socketNum, char *message, int messageSize)
+int sendResponse(int socketNum, char *message, int messageSize)
 {
 	int value = write(socketNum, message, strlen(message));
 	if(value < 0)
@@ -333,15 +333,25 @@ void listFiles()
 {
 	DIR *dir;
 	struct dirent *ent;
-	if ((dir = opendir ("\\")) != NULL) {
+	if ((dir = opendir ("root")) != NULL) {
   		/* print all the files and directories within directory */
-  	while ((ent = readdir (dir)) != NULL) {
-    	printf ("%s\n", ent->d_name);
-  	}
-  	closedir (dir);
+  		while ((ent = readdir (dir)) != NULL) {
+			if(ent->d_type != 4) 
+    			printf ("%s, %d\n", ent->d_name, ent->d_type);
+  		}
+  		closedir (dir);
 	} else {
   		/* could not open directory */
   		perror ("Directory error");
-  		//return EXIT_FAILURE;
 	}
+}
+
+int isFileExist(char *file)
+{
+	FILE *fil = fopen(file);
+	if(fil == NULL)
+	{
+		return -1;
+	}
+	return 1;
 }
