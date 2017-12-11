@@ -11,6 +11,8 @@
 #include <pthread.h>
 #include <dirent.h>
 
+#include "directory.h"
+
 #define BUFFER_SIZE 1000
 #define MAX_NUMBERS_TO_PARSE 10
 #define QUEUE_SIZE 5
@@ -58,8 +60,8 @@ struct thread_data_t
 
 int main(int argc, char *argv[])
 {
-	listFiles();
-	return;
+	listDirFiles();	
+	return -1;
 	if(argc == 1)
 	{
 		startServer("127.0.0.1", 21);		
@@ -121,7 +123,7 @@ int startServer(char * addr, int port)
 		return -1;
 	}
 	
-	int sockSize = sizeof(struct sockaddr);
+	socklen_t sockSize = sizeof(struct sockaddr);
 
 	int runserver = 1;
 
@@ -162,7 +164,7 @@ void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remo
     //	nazwie t_data (+ w odpowiednim miejscu zwolnienie pamięci)
     //TODO wypełnienie pól struktury
     struct thread_data_t *t_data;
-    t_data = malloc((sizeof(struct thread_data_t)));	
+    t_data = new thread_data_t;	
     t_data->socketDescriptor = connection_socket_descriptor;
     t_data->remote = remote;
 
@@ -201,7 +203,7 @@ void *ThreadBehavior(void *t_data)
 		{
 			if(sendExit > 0)
 			{
-				write(th_data->socketDescriptor, (char)-1, 1);
+				write(th_data->socketDescriptor, (const void *)-1,(size_t)1);
 				printf("disconnected from client\n\n");
 				keepConnection = 0;
 				continue;
