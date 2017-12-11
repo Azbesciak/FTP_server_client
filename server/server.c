@@ -44,7 +44,7 @@ int startServer(char * addr, int port);
 void *ThreadBehavior(void *t_data);
 void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remote);
 int sendData2(int socketNum, char *message);
-int sendData(int socketNum, char *message, int messageSize);
+int sendResponse(int socketNum, char *message, int messageSize);
 int readFile(char *filename, char * buffer, long *bufferSize);
 void listFiles();
 
@@ -217,7 +217,7 @@ void *ThreadBehavior(void *t_data)
 				buffer = "asdasd";
 				//buffer[0] = buffer[1] = buffer[2] = buffer[3] = (char)0;
 				//printf("Buffer[0] >%d<\n", buffer[0]);
-				sendData(th_data->socketDescriptor, buffer, 100);
+				sendResponse(th_data->socketDescriptor, buffer, 100);
 			}else
 			{
 				perror("Unable to read file");
@@ -348,7 +348,7 @@ void listFiles()
 
 int isFileExist(char *file)
 {
-	FILE *fil = fopen(file);
+	FILE *fil = fopen(file, "r");
 	if(fil == NULL)
 	{
 		return -1;
