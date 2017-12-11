@@ -1,3 +1,3 @@
 #!/bin/bash
-make server
+make server || exit 1
 ./server
