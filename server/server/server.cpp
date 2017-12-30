@@ -11,12 +11,9 @@
 #include <pthread.h>
 #include <dirent.h>
 
+#include "server.h"
 #include "directory.h"
 
-#define BUFFER_SIZE 1000
-#define MAX_NUMBERS_TO_PARSE 10
-#define QUEUE_SIZE 5
-#define FILTER_NOT_ALLOWED_FILES 4
 /*
 	RFC
 	https://tools.ietf.org/html/rfc959
@@ -35,20 +32,6 @@
 
 
 */
-typedef void (* CommandAction)(int);
-
-
-//returns action appropriate to client's command
-CommandAction * parseReceivedData(char *receivedData);	
-int checkCommand(char *data, char *command);
-int sumReceivedData(int *numbers, int numbersSize);
-int startServer(char * addr, int port);
-void *ThreadBehavior(void *t_data);
-void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remote);
-int sendData2(int socketNum, char *message);
-int sendResponse(int socketNum, char *message, int messageSize);
-int readFile(char *filename, char * buffer, long *bufferSize);
-void listFiles();
 
 //struktura zawierająca dane, które zostaną przekazane do wątku
 struct thread_data_t
@@ -60,11 +43,18 @@ struct thread_data_t
 
 int main(int argc, char *argv[])
 {
+	string command = "";
+	while(command != "exit" 
+		&& command != "quit")
+	{
+		cin >> command;
+		;
+	}
 	listDirFiles();	
-	return -1;
+//	return -1;
 	if(argc == 1)
 	{
-		startServer("127.0.0.1", 21);		
+		startServer("127.0.0.1", 10001);		
 	}
 	else if(argc == 2)
 	{
