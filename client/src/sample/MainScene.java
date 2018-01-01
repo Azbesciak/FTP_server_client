@@ -58,8 +58,8 @@ public class MainScene {
     private void connectWithServer() {
         Socket client = null;
         try {
-            client = new Socket("127.0.0.1", 10001);
-            //client = new Socket(serverAddress.getText() , Integer.valueOf(portNumber.getText()));
+            //client = new Socket("127.0.0.1", 10001);
+            client = new Socket(serverAddress.getText() , Integer.valueOf(portNumber.getText()));
             OutputStream out = client.getOutputStream();
 
 

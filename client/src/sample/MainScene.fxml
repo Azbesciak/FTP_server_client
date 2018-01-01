@@ -20,9 +20,9 @@
    <top>
       <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0">
          <Label text="Adres serwera" />
-         <TextField fx:id="serverAddress" promptText="adres serwera" />
+         <TextField fx:id="serverAddress" promptText="adres serwera" text="127.0.0.1" />
          <Label text="Port" />
-         <TextField fx:id="portNumber" promptText="numer portu" />
+         <TextField fx:id="portNumber" promptText="numer portu" text="10001" />
 
          <Button fx:id="connect" mnemonicParsing="false" onMouseClicked="#connectWithServer" prefHeight="47.0" prefWidth="146.0" text="Połącz z serwerem" BorderPane.alignment="CENTER" />
          <opaqueInsets>
