@@ -1,1 +1,7 @@
 server/bin/*
+client/.idea/
+server/.idea/
+server/tags
+server/cmake-build-debug/
+client/out/
+client/test.bin
