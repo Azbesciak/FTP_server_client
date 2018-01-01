@@ -12,4 +12,4 @@ add_executable(server
         server/server.h
         utils/directory.cpp
         utils/directory.h
-        Makefile utils/Client.cpp utils/Client.h utils/Directory.cpp utils/Directory.h utils/File/File.cpp utils/File/File.h utils/FTP.cpp utils/FTP.h)
+        Makefile utils/Client.cpp utils/Client.h utils/Directory.cpp utils/Directory.h utils/File/File.cpp utils/File/File.h utils/FTP.cpp utils/FTP.h utils/ServerException.h)

@@ -10,23 +10,28 @@
 
 #include "FTP.h"
 #include "Directory.h"
+#include "ServerException.h"
 
 string FTP::toUpper(string data) {
     std::transform(data.begin(), data.end(), data.begin(), ::toupper);
     return data;
 }
-
+void FTP::parseCommand(char *command) {
+    string data(command);
+    this->parseCommand(data);
+}
 
 void FTP::parseCommand(string command) {
     vector<string> splittedCommand = splitCommand(command);
     if(splittedCommand.size() == 0)
-        throw new string("501 Syntax error in parameters.");
-     if(splittedCommand[0].find("MKD") > 0)
+        throw new ServerException("501 Syntax error in parameters.");
+
+    splittedCommand[0] = toUpper(splittedCommand[0]);
+     if(splittedCommand[0].find("MKD") >= 0)
     {
         if(splittedCommand.size() < 2)
-            throw new string("501 Syntax error in arguments.");
-        //makeDirectory(splittedCommand[1]);
-        makeDirectory("asdas");
+            throw new ServerException("501 Syntax error in arguments.");
+        makeDirectory(splittedCommand[1]);
     }/*
     map<string, FTP::CommandAction>::const_iterator element = stringToFunction.find(splittedCommand[0]);
     if(element != stringToFunction.end())
@@ -37,7 +42,7 @@ void FTP::parseCommand(string command) {
     }*/
     else
     {
-        throw new string("504 Command not implemented.");
+        throw new ServerException("504 Command not implemented.");
     }
 }
 
@@ -63,7 +68,7 @@ void FTP::sendResponse(string message) {
 vector<string> FTP::splitCommand(string command) {
     vector<string> pieces;
     istringstream iss(command);
-    copy(istream_iterator<string>(),
+    copy(istream_iterator<string>(iss),
          istream_iterator<string>(),
          back_inserter(pieces));
     return pieces;
@@ -86,18 +91,18 @@ void FTP::removeDirectory(string name) {
     try {
         Directory::removeDirectory(name);
         sendResponse("200 OK");
-    }catch(string errorMessage)
+    }catch(ServerException &errorMessage)
     {
-        sendResponse(errorMessage);
+        sendResponse(errorMessage.what());
     }
 }
 void FTP::makeDirectory(string name) {
     try {
         Directory::createDirectory(name);
         sendResponse("200 OK");
-    }catch(string errorMessage)
+    }catch(ServerException errorMessage)
     {
-        sendResponse(errorMessage);
+        sendResponse(errorMessage.what());
     }
 }
 
@@ -112,7 +117,7 @@ void FTP::setTransferType(string type) {
             transferType = 'I';
             break;
         default:
-            throw new string("501 Not supported transfer type!");
+            throw new ServerException("501 Not supported transfer type!");
     }
     sendResponse("200 OK");
 }

@@ -9,7 +9,7 @@
 #include <cstdlib>
 #include "Directory.h"
 
-const string Directory::ROOTDIR = "root/";
+const string Directory::ROOTDIR = "/home/jakub/pp/FTP_server_client/root/";
 
 void Directory::listDirFiles() {
 
@@ -20,7 +20,9 @@ bool Directory::createDirectory(string name) {
     {
         return false;
     }
-    return mkdir((ROOTDIR + name.c_str()).c_str(), 0777) == 0 ? true : false;
+    string path(name);
+    path = ROOTDIR + path;
+    return mkdir(path.c_str(), 0777) == 0 ? true : false;
 }
 
 

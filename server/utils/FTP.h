@@ -16,6 +16,7 @@ public:
 
     void sendInitialMessage();
     void parseCommand(string command);
+    void parseCommand(char * command);
     void sendResponse(string message);
 private:
     vector<string> splitCommand(string command);
