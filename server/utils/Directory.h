@@ -16,10 +16,11 @@ public:
     static const string ROOTDIR;
     void listDirFiles();
     static void removeDirectory(string name);
-    static bool createDirectory(string name);
+    static void createDirectory(string name);
     void listFiles();
 private:
     static bool isDirectoryExist(string dirname);
+    static string POSIXSlashes(string windowsSlashes);
 
 };
 

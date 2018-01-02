@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <cstdlib>
 #include "Directory.h"
+#include "ServerException.h"
 
 const string Directory::ROOTDIR = "/home/jakub/pp/FTP_server_client/root/";
 
@@ -15,14 +16,10 @@ void Directory::listDirFiles() {
 
 }
 
-bool Directory::createDirectory(string name) {
-    if(isDirectoryExist(name))
-    {
-        return false;
-    }
+void Directory::createDirectory(string name) {
     string path(name);
     path = ROOTDIR + path;
-    return mkdir(path.c_str(), 0777) == 0 ? true : false;
+    mkdir(path.c_str(), 0777) ;
 }
 
 
@@ -55,11 +52,20 @@ bool Directory::isDirectoryExist(string dirname) {
 void Directory::removeDirectory(string name) {
     if(!isDirectoryExist(name))
     {
-        throw new string("550 Directory not exist!");
+        throw new ServerException("550 Directory not exist!");
     }
     if(rmdir(name.c_str()) == -1)
     {
-        throw new string("550 Directory not empty!");
+        throw new ServerException("550 Directory not empty!");
     }
+}
+
+string Directory::POSIXSlashes(string windowsSlashes) {
+    int pos = 0;
+    while((pos = windowsSlashes.find("\\") )>=0)
+    {
+        windowsSlashes.replace(pos, 1, "/");
+    }
+    return windowsSlashes;
 }
 
