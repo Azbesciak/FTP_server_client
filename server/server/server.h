@@ -43,8 +43,6 @@
 */
 using namespace std;
 
-//typedef void (* CommandAction)(int);
-
 struct server_opts
 {
     char * addr;
@@ -58,24 +56,10 @@ struct thread_data_t
     struct sockaddr_in *remote;
 };
 
-
-struct client_data
-{
-    thread_data_t *thread_data;
-    int data_port = -1;
-    in_addr addr;
-};
-
-//returns action appropriate to client's command
-FTP::CommandAction parseReceivedData(char *receivedData);
-int checkCommand(char *data, char *command);
 void *startServer(void *server_opts);
 void *connection(void *t_data);
 void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remote);
-int sendData(int socketNum, char *data);
-int sendResponse(int socketNum, char *message, int messageSize);
 void parseCommand(string command);
 int createServerThread(char * addr, int port);
 void cleanRoutine(void *arg);
-void doSth(int a);
 void displayRequest(int socketDescriptor, char * request);

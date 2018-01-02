@@ -18,6 +18,7 @@ public:
     void parseCommand(string command);
     void parseCommand(char * command);
     void sendResponse(string message);
+    char *buffer;
 private:
     vector<string> splitCommand(string command);
     int socket;

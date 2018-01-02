@@ -157,9 +157,12 @@ void *connection(void *t_data) {
 
     cout << "Inicjalizacja się powiodła. Deskryptor " << GREEN_TEXT(th_data->socketDescriptor) <<", trafił z adresu "<< GREEN_TEXT(remoteAddr) <<".\n";
 
-    char buffer[BUFFER_SIZE];
+    char *buffer = new char[BUFFER_SIZE];
     int keepConnection = 1;
     FTP *ftpClient = new FTP(th_data->socketDescriptor);
+    ftpClient->sendInitialMessage();
+
+    //main loop
     while (keepConnection > 0) {
         int value = read(th_data->socketDescriptor, buffer, BUFFER_SIZE);
         if (value > 0) {
@@ -169,39 +172,22 @@ void *connection(void *t_data) {
             } catch (ServerException &errorMessage) {
                 ftpClient->sendResponse(errorMessage.what());
             } catch (...) {
-                ftpClient->sendResponse("unknown problem");
+                ftpClient->sendResponse("Unknown problem.");
             }
-
         } else if (buffer[0] == 0) {
-            printf("Client %s disconnected.\n", remoteAddr);
+            cout << RED_TEXT("Klient z adresu "<< remoteAddr << ", deskryptor "<< th_data->socketDescriptor <<" się rozłączył!\n");
             keepConnection = 0;
             continue;
         } else {
             printf("Undefined behaviour\n");
         }
-        //sleep(200);
+        memset(buffer, 0, BUFFER_SIZE);
 
     }
-    cout << "ended\n";
     delete (struct thread_data_t *) t_data;
     pthread_exit(NULL);
 }
 
-
-int sendResponse(int socketNum, char *message, int messageSize) {
-
-    string data = message;
-    data = data;
-    int value = write(socketNum, data.c_str(), data.size());
-    if (value < 0) {
-        printf("Error when sending data %s, socket number : %d\n", data.c_str(), socketNum);
-        perror("Couldn't send data");
-    } else {
-        printf("Send %d bytes.\n", value);
-    }
-    return value;
-
-}
 
 void parseCommand(string command) {
     if (command.find("restart") > 0) {

@@ -25,25 +25,23 @@ void FTP::parseCommand(char *command) {
 void FTP::parseCommand(string command) {
     vector<string> splittedCommand = splitCommand(command);
     if(splittedCommand.size() == 0)
-        throw new ServerException("501 Syntax error in parameters.");
+    {
+        throw ServerException("501 Syntax error in parameters.");
+    }
 
     splittedCommand[0] = toUpper(splittedCommand[0]);
      if(splittedCommand[0].find("MKD") >= 0)
     {
         if(splittedCommand.size() < 2)
-            throw new ServerException("501 Syntax error in arguments.");
+        {
+            throw ServerException("501 Syntax error in arguments.");
+
+        }
         makeDirectory(splittedCommand[1]);
-    }/*
-    map<string, FTP::CommandAction>::const_iterator element = stringToFunction.find(splittedCommand[0]);
-    if(element != stringToFunction.end())
-    {
-        if(splittedCommand.size() < 2)
-            throw new string("501 Syntax error in arguments.");
-        element->second(splittedCommand[1]);
-    }*/
+    }
     else
     {
-        throw new ServerException("504 Command not implemented.");
+        throw ServerException("504 Command not implemented.");
     }
 }
 
@@ -123,4 +121,5 @@ void FTP::setTransferType(string type) {
     }
     sendResponse("200 OK");
 }
+
 
