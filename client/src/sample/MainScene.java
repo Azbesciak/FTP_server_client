@@ -1,5 +1,7 @@
 package sample;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.fxml.FXML;
@@ -23,8 +25,17 @@ public class MainScene {
     public TextField portNumber;
     @FXML
     public TreeView files;
+    public TextField RemotePath;
+    public Button addRemoteFolder;
+    public Button deleteRemoteFolder;
+    public Button download;
+    public Button upload;
+    public Button deleteLocalFolder;
+    public Button addLocalFolder;
     @FXML
     private Button connect;
+    public TextField LocalPath;
+    private Connection connection;
     @FXML
     private Label connectionStatus;
     @FXML
@@ -35,17 +46,20 @@ public class MainScene {
        // files.setEditable(true);
        // files.setCellFactory(TextFieldTreeCell.forTreeView());
         files.setRoot(getRootDir());
+        connection= new Connection();
         files.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
                 if(event.getClickCount() == 2)
                 {
                     ObservableList<TreeItem<File>> file = files.getSelectionModel().getSelectedItems();
+
                     System.out.println(file.get(0).getValue());
                 }
             }
         });
         listFiles();
+      //  getDirectory();
     }
 
 
@@ -56,68 +70,9 @@ public class MainScene {
 
     @FXML
     private void connectWithServer() {
-        Socket client = null;
-        try {
-            //client = new Socket("127.0.0.1", 10001);
-            client = new Socket(serverAddress.getText() , Integer.valueOf(portNumber.getText()));
-            OutputStream out = client.getOutputStream();
-
-
-            //waits for response
-            String path = "test.bin";
-            out.write("Request: RETR test.bin\n\r".getBytes());
-
-            FileOutputStream stream = new FileOutputStream(path);
-            //odpowiedz
-            byte buff[] = new byte[100];
-            InputStream in = client.getInputStream();
-            boolean keepAlive = true;
-            while (keepAlive) {
-                if (in.available() > 0) {
-                    boolean binaryMode = false;
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-
-                    //String serverMessage = reader.readLine();
-                  //  System.out.println("bytes received " + in.available());
-                  //  System.out.println("data received " + serverMessage);
-
-
-                    Arrays.fill(buff, (byte) 0);
-                    in.read(buff);
-
-                    if (buff[0] == (byte) -1) {
-                        System.out.println("Server aborted connection");
-                        keepAlive = false;
-                        continue;
-                    }
-
-                    if ((int)buff[0] == 0)
-                    {
-                        System.out.println("Saving stream");
-                        stream.write(buff);
-                        break;
-                    }
-
-                    System.out.println("Received data: " + new String(buff, StandardCharsets.UTF_8));
-
-
-                }
-            }
-
-            stream.close();
-            client.close();
-
-        } catch (IOException e) {
-            System.out.println("Brak połączenia");
-        }
-
-
-        try {
-            listDirectoryFiles("test");
-        } catch (RuntimeException e) {
-            System.out.println(e.getMessage());
-        }
+        connection.run();
     }
+
 
     public final String rootDir = "ftp_client_root_dir\\";
 
@@ -146,6 +101,15 @@ public class MainScene {
 
             public void handle(Event e) {
                 TreeItem<File> expanded= (TreeItem<File>) e.getSource();
+                if(!expanded.isLeaf())
+                {
+                    LocalPath.setText(expanded.getValue().toString());
+                   if(expanded.getValue().toString()=="Local Computer")
+                    {
+                        LocalPath.setText("\\");
+                    }
+
+                }
                 ObservableList<TreeItem<File>> files = expanded.getChildren();
 
                 for (TreeItem<File> f : files) {
@@ -164,11 +128,27 @@ public class MainScene {
         });
     }
 
+//    private void getDirectory() {
+//        files.getSelectionModel().selectedItemProperty().addListener( new ChangeListener() {
+//
+//            @Override
+//            public void changed(ObservableValue observable, Object oldValue,
+//                                Object newValue) {
+//
+//                TreeItem<String> selectedItem = (TreeItem<String>) newValue;
+//                System.out.println(selectedItem.getValue().toString());
+//                // do what ever you want
+//            }
+//
+//        });
+//
+//    }
+
 
 
     private TreeItem<File> getRootDir()
     {
-        TreeItem<File> root = new TreeItem<File>(new File("LocalComputer"));
+        TreeItem<File> root = new TreeItem<File>(new File("Local Computer"));
         Iterable<Path> rootDirectories=FileSystems.getDefault().getRootDirectories();
         for(Path name:rootDirectories) {
 

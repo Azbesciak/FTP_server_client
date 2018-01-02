@@ -7,8 +7,9 @@
 <?import javafx.scene.control.TreeView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
 
-<BorderPane minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="sample.MainScene">
+<BorderPane minHeight="-Infinity" minWidth="-Infinity" prefHeight="783.0" prefWidth="879.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="sample.MainScene">
 
    <children>
       <BorderPane prefHeight="200.0" prefWidth="200.0">
@@ -18,20 +19,39 @@
       </BorderPane>
    </children>
    <top>
-      <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0">
-         <Label text="Adres serwera" />
-         <TextField fx:id="serverAddress" promptText="adres serwera" text="127.0.0.1" />
-         <Label text="Port" />
-         <TextField fx:id="portNumber" promptText="numer portu" text="10001" />
-
-         <Button fx:id="connect" mnemonicParsing="false" onMouseClicked="#connectWithServer" prefHeight="47.0" prefWidth="146.0" text="Połącz z serwerem" BorderPane.alignment="CENTER" />
+      <HBox alignment="CENTER" centerShape="false" prefHeight="239.0" prefWidth="800.0" scaleShape="false">
+         <Pane prefHeight="239.0" prefWidth="910.0">
+            <children>
+               <Label layoutX="92.0" layoutY="35.0" text="Adres serwera" />
+               <Label layoutX="321.0" layoutY="35.0" text="Port" />
+         
+               <Button fx:id="connect" layoutX="524.0" layoutY="20.0" mnemonicParsing="false" onMouseClicked="#connectWithServer" prefHeight="47.0" prefWidth="146.0" text="Połącz z serwerem" />
+               <TextField fx:id="serverAddress" layoutX="183.0" layoutY="28.0" prefHeight="32.0" prefWidth="130.0" promptText="adres serwera" text="127.0.0.1" />
+               <TextField fx:id="portNumber" layoutX="349.0" layoutY="31.0" promptText="numer portu" text="10001" />
+               <Button fx:id="addLocalFolder" layoutX="14.0" layoutY="138.0" mnemonicParsing="false" prefHeight="55.0" prefWidth="126.0" text="Dodaj folder" />
+               <Button fx:id="deleteLocalFolder" layoutX="166.0" layoutY="138.0" mnemonicParsing="false" prefHeight="55.0" prefWidth="114.0" text="Usuń folder" />
+               <TextField fx:id="fileName" layoutX="362.0" layoutY="200.0" prefHeight="25.0" prefWidth="162.0" />
+               <Button fx:id="upload" layoutX="373.0" layoutY="168.0" mnemonicParsing="false" text="Pobierz" />
+               <Button fx:id="download" layoutX="452.0" layoutY="168.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="61.0" text="Wyślij" />
+               <Button fx:id="addRemoteFolder" layoutX="582.0" layoutY="140.0" mnemonicParsing="false" prefHeight="55.0" prefWidth="126.0" text="Dodaj folder" />
+               <Button fx:id="deleteRemoteFolder" layoutX="735.0" layoutY="140.0" mnemonicParsing="false" prefHeight="55.0" prefWidth="114.0" text="Usuń folder" />
+               <TextField fx:id="RemotePath" layoutX="590.0" layoutY="95.0" prefHeight="25.0" prefWidth="275.0" />
+               <TextField fx:id="LocalPath" layoutX="18.0" layoutY="95.0" prefHeight="25.0" prefWidth="252.0" />
+            </children>
+         </Pane>
          <opaqueInsets>
             <Insets />
          </opaqueInsets>
 
       </HBox>
       </top>
+   <left>
+      <TreeView fx:id="files" prefHeight="324.0" prefWidth="316.0" BorderPane.alignment="CENTER" />
+   </left>
+   <right>
+      <TreeView prefHeight="544.0" prefWidth="298.0" BorderPane.alignment="CENTER" />
+   </right>
    <center>
-      <TreeView fx:id="files" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
+      <Pane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
    </center>
 </BorderPane>
