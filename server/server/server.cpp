@@ -1,4 +1,3 @@
-#include <utils/ServerException.h>
 #include "server.h"
 #include "TerminalUtils.h"
 /*

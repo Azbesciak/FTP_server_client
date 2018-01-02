@@ -1,6 +1,7 @@
 #include "Directory.h"
 #include "Client.h"
 #include "FTP.h"
+#include "ServerException.h"
 
 //system includes
 #include <stdio.h>
