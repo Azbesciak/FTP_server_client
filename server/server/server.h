@@ -77,3 +77,4 @@ void parseCommand(string command);
 int createServerThread(char * addr, int port);
 void cleanRoutine(void *arg);
 void doSth(int a);
+void displayRequest(int socketDescriptor, char * request);

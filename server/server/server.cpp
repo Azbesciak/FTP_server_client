@@ -1,6 +1,6 @@
 #include <utils/ServerException.h>
 #include "server.h"
-
+#include "TerminalUtils.h"
 /*
 	RFC
 	https://tools.ietf.org/html/rfc959
@@ -90,13 +90,13 @@ void *startServer(void *serverOpts) {
     int time = 1;
     setsockopt(socketNum, SOL_SOCKET, SO_REUSEADDR, (char *) &time, sizeof(time));
     if (bind(socketNum, (struct sockaddr *) &sockAddr, sizeof(sockAddr)) < 0) {
-        perror("Binding blad:");
+        perror("Binding error");
         exit(-1);
     }
 
 
     if (listen(socketNum, QUEUE_SIZE) < 0) {
-        perror("Blad listen:");
+        perror("Listen error");
         exit(-1);
     }
     pthread_cleanup_push(cleanRoutine, (void *) 1);
@@ -113,7 +113,7 @@ void *startServer(void *serverOpts) {
             char remoteAddr[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
             //TODO pass structure with client's data port
-            printf("Client %s connected. Assigned socket %d\n", remoteAddr, connection_descriptor);
+            printf("Podłączono klienta z adresem %s. Przypisany deskryptor %d\n", remoteAddr, connection_descriptor);
             handleConnection(connection_descriptor, &remote);
         }
     pthread_cleanup_pop(1);
@@ -144,8 +144,6 @@ void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remo
     if (create_result != 0) {
         printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", create_result);
         exit(-1);
-    } else {
-        printf("Creating thread success\n");
     }
 
 }
@@ -158,15 +156,15 @@ void *connection(void *t_data) {
     char remoteAddr[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(th_data->remote->sin_addr), remoteAddr, INET_ADDRSTRLEN);
 
-    printf("Thread created. Socket number is %d, remote host address is %s\n", th_data->socketDescriptor, remoteAddr);
+    cout << "Inicjalizacja się powiodła. Deskryptor " << GREEN_TEXT(th_data->socketDescriptor) <<", trafił z adresu "<< GREEN_TEXT(remoteAddr) <<".\n";
 
     char buffer[BUFFER_SIZE];
     int keepConnection = 1;
     FTP *ftpClient = new FTP(th_data->socketDescriptor);
     while (keepConnection > 0) {
         int value = read(th_data->socketDescriptor, buffer, BUFFER_SIZE);
-        cout << "Reading...\n";
         if (value > 0) {
+            displayRequest(th_data->socketDescriptor, buffer);
             try {
                 ftpClient->parseCommand(buffer);
             } catch (ServerException &errorMessage) {
@@ -211,3 +209,11 @@ void parseCommand(string command) {
         cout << "Restarting server";
     }
 }
+
+
+void displayRequest(int socketDescriptor, char *request) {
+    cout << YELLOW_TEXT("client " <<  socketDescriptor) << "\n";
+    cout << "\t" << MAGENTA_TEXT("request from " << socketDescriptor << ":\t") << GREEN_TEXT(request);
+}
+
+

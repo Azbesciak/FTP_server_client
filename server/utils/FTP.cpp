@@ -11,6 +11,7 @@
 #include "FTP.h"
 #include "Directory.h"
 #include "ServerException.h"
+#include "TerminalUtils.h"
 
 string FTP::toUpper(string data) {
     std::transform(data.begin(), data.end(), data.begin(), ::toupper);
@@ -60,6 +61,7 @@ FTP::FTP(int socket) : stringToFunction(create_stringToFunctionMap()) {
 
 void FTP::sendResponse(string message) {
     message += "\r\n";
+    cout << "\t" << MAGENTA_TEXT("response to " << socket << ":\t") << GREEN_TEXT(message);
     write(socket, message.c_str(), message.size());
 }
 
