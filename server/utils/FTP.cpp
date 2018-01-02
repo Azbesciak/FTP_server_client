@@ -17,31 +17,42 @@ string FTP::toUpper(string data) {
     std::transform(data.begin(), data.end(), data.begin(), ::toupper);
     return data;
 }
+
 void FTP::parseCommand(char *command) {
     string data(command);
     this->parseCommand(data);
 }
 
 void FTP::parseCommand(string command) {
-    vector<string> splittedCommand = splitCommand(command);
-    if(splittedCommand.size() == 0)
-    {
-        throw ServerException("501 Syntax error in parameters.");
+    if (command.size() > 30) {
+        throw new ServerException("500 Command line too long.");
     }
 
+    vector<string> splittedCommand = splitCommand(command);
+    if (splittedCommand.size() == 0) {
+        throw new ServerException("500 Syntax error.");
+    }
+    int pos = 0;
     splittedCommand[0] = toUpper(splittedCommand[0]);
-     if(splittedCommand[0].find("MKD") >= 0)
-    {
-        if(splittedCommand.size() < 2)
-        {
-            throw ServerException("501 Syntax error in arguments.");
+    if ((pos = splittedCommand[0].find("TYPE")) >= 0) {
+        if (splittedCommand.size() < 2) {
+            throw new ServerException("501 Syntax error in parameters.");
+        }
+        setTransferType(splittedCommand[1]);
+    } else if ((pos = splittedCommand[0].find("MKDIR")) >= 0) {
+        if (splittedCommand.size() < 2) {
+            throw new ServerException("501 Syntax error in parameters.");
 
         }
         makeDirectory(splittedCommand[1]);
-    }
-    else
-    {
-        throw ServerException("504 Command not implemented.");
+    } else if ((pos = splittedCommand[0].find("RMDIR")) >= 0) {
+        if (splittedCommand.size() < 2) {
+            throw new ServerException("501 Syntax error in parameters.");
+        }
+        removeDirectory(splittedCommand[1]);
+    } else {
+        throw new ServerException("500 Command unrecognized.");
+        //throw new ServerException("504 Command not implemented.");
     }
 }
 
@@ -64,7 +75,6 @@ void FTP::sendResponse(string message) {
 }
 
 
-
 vector<string> FTP::splitCommand(string command) {
     vector<string> pieces;
     istringstream iss(command);
@@ -76,9 +86,9 @@ vector<string> FTP::splitCommand(string command) {
 
 
 map<string, FTP::CommandAction> FTP::create_stringToFunctionMap() {
-        map<string, CommandAction > temp;
-        temp.insert(pair<string, CommandAction >("MKD", &FTP::makeDirectory));
-        return temp;
+    map<string, CommandAction> temp;
+    temp.insert(pair<string, CommandAction>("MKD", &FTP::makeDirectory));
+    return temp;
 }
 
 //logging in methods
@@ -91,35 +101,33 @@ void FTP::removeDirectory(string name) {
     try {
         Directory::removeDirectory(name);
         sendResponse("200 OK");
-    }catch(ServerException &errorMessage)
-    {
+    } catch (ServerException &errorMessage) {
         sendResponse(errorMessage.what());
     }
 }
+//throws ServerException if
 void FTP::makeDirectory(string name) {
-    try {
-        Directory::createDirectory(name);
-        sendResponse("200 OK");
-    }catch(ServerException errorMessage)
-    {
-        sendResponse(errorMessage.what());
-    }
+    Directory::createDirectory(name);
+    sendResponse("200 OK");
 }
 
 //file transfer methods
 void FTP::setTransferType(string type) {
-    switch(type[0])
-    {
+    if (type.size() != 1) {
+        throw new ServerException("501 Syntax error in parameters or arguments.");
+    }
+    switch (type[0]) {
         case 'A':
             transferType = 'A';
+            sendResponse("200 Type set to A.");
             break;
         case 'I':
             transferType = 'I';
+            sendResponse("200 Type set to I.");
             break;
         default:
             throw new ServerException("501 Not supported transfer type!");
     }
-    sendResponse("200 OK");
 }
 
 
