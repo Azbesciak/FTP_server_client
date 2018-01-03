@@ -93,6 +93,14 @@ string Directory::getRootDir() {
     }
     string serverHome(home);
     serverHome += "/ftp_server/";
+
+    //create ftp_server in home dir if not exist
+    struct stat st = {0};
+    if(stat(serverHome.c_str(), &st) == -1)
+    {
+        mkdir(serverHome.c_str(), 0777);
+    }
+
     return serverHome;
 }
 
