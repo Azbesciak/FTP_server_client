@@ -13,15 +13,15 @@ using namespace std;
 class Directory {
 
 public:
-    static const string ROOTDIR;
+    static string getRootDir();
     void listDirFiles();
-    static void removeDirectory(string name);
-    static void createDirectory(string name);
+    static void removeDirectory(string directory);
+    static void createDirectory(string directory);
+
     void listFiles();
 private:
     static bool isDirectoryExist(string dirname);
-    static string POSIXSlashes(string windowsSlashes);
-
+    static void POSIXSlashes(string *windowsSlashes);
 };
 
 

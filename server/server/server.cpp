@@ -26,7 +26,6 @@ int runserver = 1;
 int main(int argc, char *argv[]) {
     string command = "";
 
-
     char *serverAddr = argc == 3 ? argv[1] : (char *) DEFAULT_ADDR;
     int port = argc == 2 ? atoi(argv[1]) : (argc == 3 ? atoi(argv[2]) : DEFAULT_PORT);
 
@@ -56,7 +55,7 @@ int createServerThread(char *addr, int port) {
     if (create_result != 0) {
         printf("Błąd przy próbie utworzenia wątku dla serwera, kod błędu: %d\n", create_result);
     } else {
-        cout << "Serwer wystartował. Folder główny: " << Directory::ROOTDIR << "\n";
+        cout << "Serwer wystartował. Folder główny: " << Directory::getRootDir() << "\n";
     }
     return create_result;
 }
