@@ -51,7 +51,7 @@ void Directory::createDirectory(string directory) {
     if (mkdir(path.c_str(), 0777) < 0) {
         //if dir exists, do nothing
         if (errno != EEXIST) {
-            string errorMsg("500 Cannot create directory ");
+            string errorMsg("500 Nie udało się stworzyć folderu ");
             errorMsg += directory + ". ";
             errorMsg += strerror(errno);
             errorMsg += ".";
@@ -127,7 +127,7 @@ string Directory::listFiles(string directory) {
         delete []size;
         closedir(dir);
     } else {
-        throw new ServerException("550 Cannot open directory.");
+        throw new ServerException("550 Nie można uzyskać dostępu do folderu.");
     }
     return value;
 }
@@ -171,10 +171,10 @@ void Directory::removeDirectory(string directory) {
     POSIXSlashes(&directory);
     directory = getRootDir() + directory;
     if (!isDirectoryExist(directory)) {
-        throw new ServerException("550 Directory not exist!");
+        throw new ServerException("550 Folder nie istnieje.");
     }
     if (rmdir(directory.c_str()) == -1) {
-        throw new ServerException("550 Directory not empty!");
+        throw new ServerException("550 Folder nie jest pusty.");
     }
 }
 

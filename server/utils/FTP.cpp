@@ -25,29 +25,29 @@ void FTP::parseCommand(char *command) {
 
 void FTP::parseCommand(string command) {
     if (command.size() > 30) {
-        throw new ServerException("500 Command line too long.");
+        throw new ServerException("500 Komenda za długa.");
     }
 
     vector<string> splittedCommand = splitCommand(command);
     if (splittedCommand.size() == 0) {
-        throw new ServerException("500 Syntax error.");
+        throw new ServerException("500 Błąd w składni.");
     }
     int pos = 0;
     splittedCommand[0] = toUpper(splittedCommand[0]);
     if ((pos = splittedCommand[0].find("TYPE")) >= 0) {
         if (splittedCommand.size() < 2) {
-            throw new ServerException("501 Syntax error in parameters.");
+            throw new ServerException("501 Błąd w składni parametrów.");
         }
         setTransferType(splittedCommand[1]);
     } else if ((pos = splittedCommand[0].find("MKDIR")) >= 0) {
         if (splittedCommand.size() < 2) {
-            throw new ServerException("501 Syntax error in parameters.");
+            throw new ServerException("501 Błąd w składni parametrów.");
 
         }
         makeDirectory(splittedCommand[1]);
     } else if ((pos = splittedCommand[0].find("RMDIR")) >= 0) {
         if (splittedCommand.size() < 2) {
-            throw new ServerException("501 Syntax error in parameters.");
+            throw new ServerException("501 Błąd w składni parametrów.");
         }
         removeDirectory(splittedCommand[1]);
     } else if ((pos = splittedCommand[0].find("LIST")) >= 0) {
@@ -66,7 +66,7 @@ void FTP::parseCommand(string command) {
         }
         changeDirectory(splittedCommand[1]);
     } else {
-        throw new ServerException("500 Command unrecognized.");
+        throw new ServerException("500 Komenda nierozpoznana.");
     }
 }
 
@@ -85,7 +85,7 @@ FTP::FTP(int socket) : stringToFunction(create_stringToFunctionMap()) {
 
 void FTP::sendResponse(string message) {
     message += "\r\n";
-    cout << "\t" << MAGENTA_TEXT("response to " << socket << ":\t") << GREEN_TEXT(message);
+    cout << "\t" << MAGENTA_TEXT("odpowiedź do " << socket << ":\t") << GREEN_TEXT(message);
     write(socket, message.c_str(), message.size());
 }
 
@@ -121,7 +121,7 @@ void FTP::makeDirectory(string name) {
 //file transfer methods
 void FTP::setTransferType(string type) {
     if (type.size() != 1) {
-        throw new ServerException("501 Syntax error in parameters or arguments.");
+        throw new ServerException("501 Błąd w składni parametrów lub argumentów.");
     }
 
     //to uppercase
@@ -138,7 +138,7 @@ void FTP::setTransferType(string type) {
             sendResponse("200 Type set to I.");
             break;
         default:
-            throw new ServerException("501 Not supported transfer type!");
+            throw new ServerException("501 Niewspierany tryb pracy.");
     }
 }
 

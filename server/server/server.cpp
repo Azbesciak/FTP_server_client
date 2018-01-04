@@ -169,14 +169,14 @@ void *connection(void *t_data) {
             } catch (ServerException *errorMessage) {
                 ftpClient->sendResponse(errorMessage->what());
             } catch (...) {
-                ftpClient->sendResponse("Unknown problem.");
+                ftpClient->sendResponse("500 Nieznany problem.");
             }
         } else if (buffer[0] == 0) {
-            cout << RED_TEXT("Klient z adresu "<< remoteAddr << ", deskryptor "<< th_data->socketDescriptor <<" się rozłączył!\n");
+            cout << RED_TEXT("Klient z adresu "<< remoteAddr << ", o deskryptorze "<< th_data->socketDescriptor <<" się rozłączył!\n");
             keepConnection = 0;
             continue;
         } else {
-            printf("Undefined behaviour\n");
+            printf("Nierozpoznana odpowiedź.\n");
         }
         //czyszczenie bufora, aby uniknac pomieszania z poprzednimi komendami
         memset(buffer, 0, BUFFER_SIZE);
@@ -190,13 +190,13 @@ void *connection(void *t_data) {
 void parseCommand(string command) {
     int pos = 0;
     if ((pos = command.find("restart")) >= 0) {
-        cout << GREEN_TEXT("Restarting server.\n");
+        cout << GREEN_TEXT("Restartowanie serwera.\n");
         runserver = 0;
         sleep(1);
         runserver = 1;
     }else if((pos = command.find("stop")) >= 0)
     {
-        cout << GREEN_TEXT("Stopping server.\n");
+        cout << GREEN_TEXT("Zatrzymywanie serwera.\n");
         runserver = 0;
     }
     else
@@ -207,8 +207,8 @@ void parseCommand(string command) {
 
 
 void displayRequest(int socketDescriptor, char *request) {
-    cout << YELLOW_TEXT("client " <<  socketDescriptor) << "\n";
-    cout << "\t" << MAGENTA_TEXT("request from " << socketDescriptor << ":\t") << GREEN_TEXT(request);
+    cout << YELLOW_TEXT("Klient " <<  socketDescriptor) << "\n";
+    cout << "\t" << MAGENTA_TEXT("Zapytanie od " << socketDescriptor << ":\t") << GREEN_TEXT(request);
 }
 
 
