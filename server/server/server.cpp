@@ -16,16 +16,15 @@
 	Dopisać odbieranie i wysyłanie danych - binarnie i tekstowo.
 	Dekodowanie poleceń ( + obsługa nieznanych poleceń - do tego też odpowiednia odpowiedź dla klienta) i formułowanie odpowiedzi.
 
+    sprawdzić dlaczego find zawsze znajduje MKD
 
 */
-
 
 int runserver = 1;
 
 int main(int argc, char *argv[]) {
     string command = "";
-
-
+    //Directory::listFiles();
     char *serverAddr = argc == 3 ? argv[1] : (char *) DEFAULT_ADDR;
     int port = argc == 2 ? atoi(argv[1]) : (argc == 3 ? atoi(argv[2]) : DEFAULT_PORT);
 
@@ -34,6 +33,7 @@ int main(int argc, char *argv[]) {
     while (command != "exit"
            && command != "quit") {
         cin >> command;
+        parseCommand(command);
 
     }
 
@@ -54,7 +54,7 @@ int createServerThread(char *addr, int port) {
     if (create_result != 0) {
         printf("Błąd przy próbie utworzenia wątku dla serwera, kod błędu: %d\n", create_result);
     } else {
-        cout << "Serwer wystartował. Folder główny: " << Directory::ROOTDIR << "\n";
+        cout << "Serwer wystartował. Folder główny: " << Directory::getRootDir() << "\n";
     }
     return create_result;
 }
@@ -102,7 +102,6 @@ void *startServer(void *serverOpts) {
         socklen_t sockSize = sizeof(struct sockaddr);
         while (runserver > 0) {
             int connection_descriptor = accept(socketNum, (struct sockaddr *) &remote, &sockSize);
-            //printf("connection descriptor %d\n", connection_descriptor);
             if (connection_descriptor < 0) {
                 perror("Client accepting error");
                 runserver = 0;
@@ -111,7 +110,7 @@ void *startServer(void *serverOpts) {
 
             char remoteAddr[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
-            //TODO pass structure with client's data port
+            //pass structure with client's data port
             printf("Podłączono klienta z adresem %s. Przypisany deskryptor %d\n", remoteAddr, connection_descriptor);
             handleConnection(connection_descriptor, &remote);
         }
@@ -128,23 +127,21 @@ void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remo
     int create_result = 0;
 
     //uchwyt na wątek
-    pthread_t thread1;
+    pthread_t clientThread;
 
     //dane, które zostaną przekazane do wątku
-    //TODO dynamiczne utworzenie instancji struktury thread_data_t o 
-    //TODO wypełnienie pól struktury
+    //t_data jest usuwany po odlaczeniu sie klienta
     struct thread_data_t *t_data;
     t_data = new thread_data_t;
     t_data->socketDescriptor = connection_socket_descriptor;
     t_data->remote = remote;
 
     //tworzy watek dla nowego klienta
-    create_result = pthread_create(&thread1, NULL, connection, (void *) t_data);
+    create_result = pthread_create(&clientThread, NULL, connection, (void *) t_data);
     if (create_result != 0) {
         printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", create_result);
         exit(-1);
     }
-
 }
 
 //funkcja opisującą zachowanie wątku - musi przyjmować argument typu (void *) i zwracać (void *)
@@ -169,8 +166,8 @@ void *connection(void *t_data) {
             displayRequest(th_data->socketDescriptor, buffer);
             try {
                 ftpClient->parseCommand(buffer);
-            } catch (ServerException &errorMessage) {
-                ftpClient->sendResponse(errorMessage.what());
+            } catch (ServerException *errorMessage) {
+                ftpClient->sendResponse(errorMessage->what());
             } catch (...) {
                 ftpClient->sendResponse("Unknown problem.");
             }
@@ -181,17 +178,30 @@ void *connection(void *t_data) {
         } else {
             printf("Undefined behaviour\n");
         }
+        //czyszczenie bufora, aby uniknac pomieszania z poprzednimi komendami
         memset(buffer, 0, BUFFER_SIZE);
-
     }
+
     delete (struct thread_data_t *) t_data;
     pthread_exit(NULL);
 }
 
 
 void parseCommand(string command) {
-    if (command.find("restart") > 0) {
-        cout << "Restarting server";
+    int pos = 0;
+    if ((pos = command.find("restart")) >= 0) {
+        cout << GREEN_TEXT("Restarting server.\n");
+        runserver = 0;
+        sleep(1);
+        runserver = 1;
+    }else if((pos = command.find("stop")) >= 0)
+    {
+        cout << GREEN_TEXT("Stopping server.\n");
+        runserver = 0;
+    }
+    else
+    {
+        cout << RED_TEXT("Brak zdefiniowanej funkcji dla ") << WHITE_TEXT(command) << "\n";
     }
 }
 
