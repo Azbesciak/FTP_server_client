@@ -50,9 +50,13 @@ void FTP::parseCommand(string command) {
             throw new ServerException("501 Syntax error in parameters.");
         }
         removeDirectory(splittedCommand[1]);
+    } else if ((pos = splittedCommand[0].find("LIST")) >= 0) {
+        if (splittedCommand.size() < 2) {
+            listFiles(currentDirectory);
+        }
+        listFiles(splittedCommand[1]);
     } else {
         throw new ServerException("500 Command unrecognized.");
-        //throw new ServerException("504 Command not implemented.");
     }
 }
 
@@ -64,6 +68,7 @@ void FTP::sendInitialMessage() {
 FTP::FTP(int socket) : stringToFunction(create_stringToFunctionMap()) {
 /*FTP::FTP(int socket) { */
     this->socket = socket;
+    currentDirectory = "/";
     //TODO fix mapping, now using simple if's
     //stringToFunction.insert(make_pair("MKD", &FTP::makeDirectory ));
 }
@@ -91,23 +96,15 @@ map<string, FTP::CommandAction> FTP::create_stringToFunctionMap() {
     return temp;
 }
 
-//logging in methods
-void FTP::userCommand(string name) {
-    sendResponse("200 Log in as a user!");
-}
-
 //directory methods
 void FTP::removeDirectory(string name) {
-    try {
-        Directory::removeDirectory(name);
-        sendResponse("200 OK");
-    } catch (ServerException &errorMessage) {
-        sendResponse(errorMessage.what());
-    }
+    Directory::removeDirectory(name);
+    sendResponse("200 OK");
 }
+
 //throws ServerException if
 void FTP::makeDirectory(string name) {
-    Directory::createDirectory(name);
+    Directory::createDirectories(name);
     sendResponse("200 OK");
 }
 
@@ -116,6 +113,11 @@ void FTP::setTransferType(string type) {
     if (type.size() != 1) {
         throw new ServerException("501 Syntax error in parameters or arguments.");
     }
+
+    //to uppercase
+    if (type[0] >= 'a')
+        type[0] -= 32;
+
     switch (type[0]) {
         case 'A':
             transferType = 'A';
@@ -128,6 +130,11 @@ void FTP::setTransferType(string type) {
         default:
             throw new ServerException("501 Not supported transfer type!");
     }
+}
+
+void FTP::listFiles(string dirName) {
+    string list = Directory::listFiles(dirName);
+    sendResponse(list);
 }
 
 

@@ -38,14 +38,14 @@ private:
     void uploadFile(string filename);
     void downloadFile(string filename);
 
+    void listFiles(string dirName);
 
     //A = ASCII
     //I = Binary
     char transferType = 0;
 
     int dataTransferPort;
-
-
+    string currentDirectory;
 };
 
 

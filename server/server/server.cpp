@@ -20,12 +20,11 @@
 
 */
 
-
 int runserver = 1;
 
 int main(int argc, char *argv[]) {
     string command = "";
-
+    //Directory::listFiles();
     char *serverAddr = argc == 3 ? argv[1] : (char *) DEFAULT_ADDR;
     int port = argc == 2 ? atoi(argv[1]) : (argc == 3 ? atoi(argv[2]) : DEFAULT_PORT);
 

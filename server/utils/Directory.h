@@ -14,11 +14,10 @@ class Directory {
 
 public:
     static string getRootDir();
-    void listDirFiles();
+    static void createDirectories(string directory);
     static void removeDirectory(string directory);
     static void createDirectory(string directory);
-
-    void listFiles();
+    static string listFiles(string directory);
 private:
     static bool isDirectoryExist(string dirname);
     static void POSIXSlashes(string *windowsSlashes);
