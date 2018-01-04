@@ -63,6 +63,7 @@ void Directory::createDirectory(string directory) {
 
 string Directory::listFiles(string directory) {
     int pos = 0;
+    POSIXSlashes(&directory);
     if (directory == "/") {
         //just slash as an argument
         if (directory == "/") {
@@ -121,7 +122,6 @@ string Directory::listFiles(string directory) {
     } else {
         throw new ServerException("550 Cannot open directory.");
     }
-    value.erase(value.size() - 1, 1);
     return value;
 }
 
@@ -150,6 +150,8 @@ void Directory::removeDirectory(string directory) {
 
 void Directory::POSIXSlashes(string *windowsSlashes) {
     int pos = 0;
+    if(windowsSlashes->size() == 0)
+        return;
     while ((pos = windowsSlashes->find("\\")) >= 0) {
         windowsSlashes->replace(pos, 1, "/");
     }
