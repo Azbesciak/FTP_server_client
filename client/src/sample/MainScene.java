@@ -1,5 +1,6 @@
 package sample;
 
+import com.sun.xml.internal.ws.util.StringUtils;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
@@ -10,6 +11,7 @@ import javafx.event.EventHandler;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.input.MouseEvent;
 
+import javax.swing.event.TreeWillExpandListener;
 import java.io.*;
 import java.lang.reflect.Array;
 import java.net.Socket;
@@ -32,6 +34,8 @@ public class MainScene {
     public Button upload;
     public Button deleteLocalFolder;
     public Button addLocalFolder;
+    public TextField fileName;
+    public TreeView serverFiles;
     @FXML
     private Button connect;
     public TextField LocalPath;
@@ -46,7 +50,9 @@ public class MainScene {
        // files.setEditable(true);
        // files.setCellFactory(TextFieldTreeCell.forTreeView());
         files.setRoot(getRootDir());
-        connection= new Connection();
+        String files2 = "Phome/32"+(char)3+"Pcache/15"+(char)3+"Ffolder/16"+(char)3+"Pplik/10"+(char)3;
+        serverFiles.setRoot(initServerFiles(files2));
+        Connection connection;
         files.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
@@ -59,7 +65,8 @@ public class MainScene {
             }
         });
         listFiles();
-      //  getDirectory();
+
+        getDirectory();
     }
 
 
@@ -68,9 +75,33 @@ public class MainScene {
 
     }
 
+    public String inverse(String text)
+    {
+        String capitalizedText="";
+        boolean capitalize=false;
+        for(int i=0;i<text.length();i++)
+        {
+            if(capitalize==true)
+            {
+                capitalizedText+=Character.toUpperCase(text.charAt(i));
+                capitalize=false;
+            }
+            else
+            {
+                capitalizedText+=text.charAt(i);
+            }
+            if(text.charAt(i)==' ') capitalize=true;
+        }
+        capitalizedText=StringUtils.capitalize(capitalizedText);
+        return capitalizedText;
+    }
+
     @FXML
     private void connectWithServer() {
-        connection.run();
+
+        connection = new Connection();
+        Thread thread = new Thread(connection);
+        thread.start();
     }
 
 
@@ -128,21 +159,70 @@ public class MainScene {
         });
     }
 
-//    private void getDirectory() {
-//        files.getSelectionModel().selectedItemProperty().addListener( new ChangeListener() {
-//
-//            @Override
-//            public void changed(ObservableValue observable, Object oldValue,
-//                                Object newValue) {
-//
-//                TreeItem<String> selectedItem = (TreeItem<String>) newValue;
-//                System.out.println(selectedItem.getValue().toString());
-//                // do what ever you want
-//            }
-//
-//        });
-//
-//    }
+    private TreeItemExtended<String> initServerFiles(String input)
+    {
+        TreeItemExtended<String>root = new TreeItemExtended<>(" / ");
+
+         String k ="";
+         k+=(char)3;
+        String[] files = input.split(k);
+
+        for (String file : files)
+        {
+            TreeItemExtended<String> treeNode;
+            if(file.charAt(0)=='P')
+            {
+                treeNode = new TreeItemExtended<>(file);
+                root.getChildren().add(treeNode);
+
+            }
+            if(file.charAt(0)=='F')
+            {
+                treeNode = new TreeItemExtended<>(file);
+               // treeNode.getChildren().add(new TreeItem<>(""));
+                root.getChildren().add(treeNode);
+
+            }
+
+        }
+        return root;
+    }
+
+    private void getDirectory()  {
+
+            files.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
+
+                @Override
+                public void changed(ObservableValue observable, Object oldValue,
+                                    Object newValue) {
+
+                    TreeItem file = (TreeItem) newValue;
+                    fileName.setText(file.getValue().toString());
+                    // do what ever you want
+                    upload.setDisable(true);
+                    download.setDisable(false);
+                }
+
+            });
+
+            serverFiles.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
+
+                @Override
+                public void changed(ObservableValue observable, Object oldValue,
+                                    Object newValue) {
+
+                    TreeItem file = (TreeItem) newValue;
+                    fileName.setText(file.getValue().toString());
+                    // do what ever you want
+                    download.setDisable(true);
+                    upload.setDisable(false);
+                }
+
+            });
+
+
+
+    }
 
 
 

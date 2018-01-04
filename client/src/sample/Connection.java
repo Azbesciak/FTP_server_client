@@ -10,27 +10,32 @@ import java.util.Arrays;
 import static java.lang.Thread.sleep;
 
 public class Connection implements  Runnable {
+    @Override
     public void run() {
         Socket client = null;
         try {
-            client = new Socket("10.0.2.15", 10001);
+            client = new Socket("127.0.1.1", 10001);
            // client = new Socket(serverAddress.getText() , Integer.valueOf(portNumber.getText()));
             OutputStream out = client.getOutputStream();
+            InputStream in = client.getInputStream();
 
+            //init list
+            String command = "LIST /";
+            PrintWriter writer = new PrintWriter(out, true);
+            writer.println(command);
 
-            //waits for response
-            String path = "test.bin";
-            out.write("Request: RETR test.bin\n\r".getBytes());
-
-            FileOutputStream stream = new FileOutputStream(path);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+            String serverMessage = reader.readLine();
+            System.out.println(serverMessage);
+            FileOutputStream stream = new FileOutputStream("/");
             //odpowiedz
             byte buff[] = new byte[100];
-            InputStream in = client.getInputStream();
+
             boolean keepAlive = true;
             while (keepAlive) {
                 if (in.available() > 0) {
                     boolean binaryMode = false;
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+                   // BufferedReader reader = new BufferedReader(new InputStreamReader(in));
 
                     //String serverMessage = reader.readLine();
                     //  System.out.println("bytes received " + in.available());
@@ -57,7 +62,7 @@ public class Connection implements  Runnable {
 
 
                 }
-                sleep(1000);
+                sleep(10);
             }
 
             stream.close();
