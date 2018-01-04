@@ -61,7 +61,7 @@ void FTP::parseCommand(string command) {
 }
 
 void FTP::sendInitialMessage() {
-    sendResponse("Serwer działa.");
+    ;//sendResponse("Serwer działa.");
 }
 
 
