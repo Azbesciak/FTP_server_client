@@ -55,6 +55,16 @@ void FTP::parseCommand(string command) {
             listFiles(currentDirectory);
         }
         listFiles(splittedCommand[1]);
+    } else if((pos = splittedCommand[0].find("PWD")) >= 0)
+    {
+        printDirectory();
+    } else if((pos = splittedCommand[0].find("CWD")) >= 0)
+    {
+        if(splittedCommand.size() < 2)
+        {
+            changeDirectory("/");
+        }
+        changeDirectory(splittedCommand[1]);
     } else {
         throw new ServerException("500 Command unrecognized.");
     }
@@ -135,6 +145,15 @@ void FTP::setTransferType(string type) {
 void FTP::listFiles(string dirName) {
     string list = Directory::listFiles(dirName);
     sendResponse(list);
+}
+
+void FTP::changeDirectory(string name) {
+    currentDirectory = Directory::ChangeDirectory(name);
+    sendResponse("200 OK");
+}
+
+void FTP::printDirectory() {
+    sendResponse(currentDirectory);
 }
 
 

@@ -10,7 +10,7 @@
 #include <cstring>
 #include <iterator>
 #include <vector>
-#include <sstream>
+#include <stdlib.h>
 #include "Directory.h"
 #include "ServerException.h"
 
@@ -91,12 +91,14 @@ string Directory::listFiles(string directory) {
     string value = "";
     if(!isDirectoryExist(directory))
     {
-        throw new ServerException("550 Directory doesn't exist!");
+        throw new ServerException("550 Folder nie istnieje!");
     }
 
+
     if ((dir = opendir(directory.c_str())) != NULL) {
-        /* print all the files and directories within directory */
+        char *size = new char[10];
         while ((ent = readdir(dir)) != NULL) {
+            //nie wypisuj folderów specjalnych
             if(strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
             {
                 continue;
@@ -105,24 +107,52 @@ string Directory::listFiles(string directory) {
             switch (ent->d_type) {
                 case
                     DT_REG:
-                    value += 'P';
+                    value += 'P';   //plik
                     break;
                 case
                     DT_DIR:
-                    value += 'F';
+                    value += 'F';   //folder
                     break;
                 default:
-                    value += 'U';
+                    value += 'U';   //jakiś inny, np pipe
                     break;
             }
-            value += ent->d_name;
+            value += ent->d_name;   //dodaj nazwe
+            value += "/";
+            memset(size, 0, 10);
+            sprintf(size, "%d", getFileSize(directory, ent->d_name));
+            value += size;
             value += char(3);
         }
+        delete []size;
         closedir(dir);
     } else {
         throw new ServerException("550 Cannot open directory.");
     }
     return value;
+}
+int Directory::getFileSize(string directory, string file)
+{
+    if(directory[directory.size() - 1] != '/')
+    {
+        directory += '/';
+    }
+    if(file[0] == '/')
+    {
+        file.erase(0, 1);
+    }
+    return getFileSize(directory + file);
+}
+
+int Directory::getFileSize(string fullname)
+{
+    struct stat st = {0};
+    if(stat(fullname.c_str(), &st) != -1)
+    {
+        return st.st_size;
+    }else{
+        throw new ServerException("550 Plik nie istnieje.");
+    }
 }
 
 bool Directory::isDirectoryExist(string dirname) {
@@ -173,5 +203,36 @@ string Directory::getRootDir() {
     }
 
     return serverHome;
+}
+
+//return value contains / at the end
+string Directory::ChangeDirectory(string directory) {
+    POSIXSlashes(&directory);
+    //test
+    //puste
+    //slash
+    //nieistniejace
+    //istniejace
+
+    if(directory == "/" || directory.empty())
+    {
+        return directory;
+    }
+
+    if(directory[0] == '/')
+    {
+        directory.erase(0,1);   //remove first slash if exists
+    }
+    if(directory[directory.size() - 1] != '/')
+    {
+        directory += '/'; //add slash at the end if doesn't exist
+    }
+
+    string fullPath = getRootDir() + directory;
+    if(!isDirectoryExist(fullPath.c_str()))
+    {
+        throw new ServerException("550 Folder nie istnieje.");
+    }
+    return directory;
 }
 

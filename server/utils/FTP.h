@@ -31,6 +31,8 @@ private:
     //directory stuff
     void makeDirectory(string name);
     void removeDirectory(string name);
+    void printDirectory();
+    void changeDirectory(string name);
 
 
     //file transfer stuff

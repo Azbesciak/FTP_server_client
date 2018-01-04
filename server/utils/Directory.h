@@ -18,9 +18,15 @@ public:
     static void removeDirectory(string directory);
     static void createDirectory(string directory);
     static string listFiles(string directory);
+
+    static string ChangeDirectory(string directory);
+
 private:
     static bool isDirectoryExist(string dirname);
     static void POSIXSlashes(string *windowsSlashes);
+    static int getFileSize(string fullname);
+
+    static int getFileSize(string directory, string file);
 };
 
 
