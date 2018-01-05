@@ -69,6 +69,20 @@ void FTP::parseCommand(string command) {
         {
             changeDirectory(splittedCommand[1]);    //przejdz do wskazanego przez parametr
         }
+    } else if((pos = splittedCommand[0].find("PORT")) >= 0)
+    {
+        throw new ServerException("500 Niezaimplementowana komenda.");
+    }else if((pos = splittedCommand[0].find("PASSV")) >= 0)
+    {
+        throw new ServerException("500 Niezaimplementowana komenda.");
+    }else if((pos = splittedCommand[0].find("RETR")) >= 0)
+    {
+        //pobieranie plików z serwera do klienta
+        throw new ServerException("500 Niezaimplementowana komenda.");
+    }else if((pos = splittedCommand[0].find("STOR")) >= 0)
+    {
+        //wysylanie plikow od klineta na serwer
+        throw new ServerException("500 Niezaimplementowana komenda.");
     } else {
         throw new ServerException("500 Komenda nierozpoznana.");
     }
@@ -97,7 +111,7 @@ vector<string> FTP::splitCommand(string command) {
 
 //directory methods
 void FTP::removeDirectory(string name) {
-    Directory::removeDirectory(name);
+    Directory::removeDirectory(name, currentDirectory);
     sendResponse("200 OK");
 }
 /*
@@ -108,7 +122,7 @@ void FTP::removeDirectory(string name) {
  *
  */
 void FTP::makeDirectory(string name) {
-    Directory::createDirectories(name);
+    Directory::createDirectories(name, currentDirectory);
     sendResponse("200 OK");
 }
 
@@ -141,7 +155,7 @@ void FTP::setTransferType(string type) {
  * dirName jest ścieżką względną. (Względem PWD).
  */
 void FTP::listFiles(string dirName) {
-    string list = Directory::listFiles(dirName);
+    string list = Directory::listFiles(dirName, currentDirectory);
     sendResponse(list);
 }
 
@@ -151,7 +165,7 @@ void FTP::listFiles(string dirName) {
  *
  */
 void FTP::changeDirectory(string name) {
-    currentDirectory = Directory::ChangeDirectory(name);
+    currentDirectory = Directory::changeDirectory(name);
     sendResponse("200 OK");
 }
 

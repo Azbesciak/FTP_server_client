@@ -13,7 +13,7 @@
 #include "Directory.h"
 #include "ServerException.h"
 
-void Directory::createDirectories(string directory) {
+void Directory::createDirectories(string directory, string currentDirectory) {
     POSIXSlashes(&directory);
 
     //remove first slash
@@ -24,6 +24,8 @@ void Directory::createDirectories(string directory) {
     vector<string> splittedDirs;
     int pos = 0;
     string newPath(getRootDir());
+    newPath += currentDirectory;
+
     while ((pos = directory.find("/")) >= 0) {
         string newDir(directory.substr(0, pos));
         newPath += newDir;
@@ -60,14 +62,14 @@ void Directory::createDirectory(string directory) {
 }
 
 
-string Directory::listFiles(string directory) {
-    int pos = 0;
+string Directory::listFiles(string directory,  string currentDirectory) {
+
     POSIXSlashes(&directory);
-    if (directory == "/") {
-        //just slash as an argument
-        if (directory == "/") {
-            directory = getRootDir();
-        }
+
+    if(directory == currentDirectory || directory == "/")
+    {
+        //chcemy poznać zawartość aktualnego katalogu
+        directory = getRootDir() + currentDirectory + "/";
     } else {
         //remove slash at the beginning
         if (directory[0] == '/') {
@@ -78,9 +80,16 @@ string Directory::listFiles(string directory) {
             directory += '/';
         }
 
+        int pos = 0;
         //add root prefix
         if ((pos = directory.find(getRootDir())) < 0) {
-            directory = getRootDir() + directory;
+            if(currentDirectory == "/")
+            {
+                directory = getRootDir() + directory;
+            }else
+            {
+                directory = getRootDir() + currentDirectory + directory;
+            }
         }
     }
 
@@ -132,10 +141,12 @@ string Directory::listFiles(string directory) {
 }
 unsigned int Directory::getSize(string directory, string file)
 {
+    //dodaj slash na koniec nazwy folderu
     if(directory[directory.size() - 1] != '/')
     {
         directory += '/';
     }
+    //usun slash na poczatku nazwy pliku
     if(file[0] == '/')
     {
         file.erase(0, 1);
@@ -166,9 +177,17 @@ bool Directory::isDirectoryExist(string dirname) {
     return S_ISDIR(st.st_mode);
 }
 
-void Directory::removeDirectory(string directory) {
+void Directory::removeDirectory(string directory, string currentDirectory) {
     POSIXSlashes(&directory);
-    directory = getRootDir() + directory;
+    if(currentDirectory == "/")
+    {
+        directory = getRootDir() + directory;
+    }
+    else
+    {
+        directory = getRootDir() + currentDirectory + directory;
+    }
+
     if (!isDirectoryExist(directory)) {
         throw new ServerException("550 Folder nie istnieje.");
     }
@@ -205,7 +224,7 @@ string Directory::getRootDir() {
 }
 
 //return value contains / at the end
-string Directory::ChangeDirectory(string directory) {
+string Directory::changeDirectory(string directory) {
     POSIXSlashes(&directory);
     preparePath(&directory);
 
