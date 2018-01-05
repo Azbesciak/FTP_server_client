@@ -42,14 +42,15 @@ void FTP::parseCommand(string command) {
     } else if ((pos = splittedCommand[0].find("MKDIR")) >= 0) {
         if (splittedCommand.size() < 2) {
             throw new ServerException("501 Błąd w składni parametrów.");
-
         }
-        makeDirectory(splittedCommand[1]);
+        string dirToCreate = getDirectoryWithSpaces(splittedCommand);
+        makeDirectory(dirToCreate);
     } else if ((pos = splittedCommand[0].find("RMDIR")) >= 0) {
         if (splittedCommand.size() < 2) {
             throw new ServerException("501 Błąd w składni parametrów.");
         }
-        removeDirectory(splittedCommand[1]);
+        string directoryToRemove = getDirectoryWithSpaces(splittedCommand);
+        removeDirectory(directoryToRemove);
     } else if ((pos = splittedCommand[0].find("LIST")) >= 0) {
         if (splittedCommand.size() < 2) {
             listFiles(currentDirectory);
@@ -177,6 +178,38 @@ void FTP::changeDirectory(string name) {
  */
 void FTP::printDirectory() {
     sendResponse(currentDirectory);
+}
+
+
+//example /dir1/named/ dir/dir2,  "named/ dir" -> "named dir"
+string FTP::getDirectoryWithSpaces(vector<string> command) {
+    //at index 0 is command string
+    int iter = 1;
+    string directory = command[iter];
+
+    //checks if last char in a directory is a backslash that indicates a space
+    while(command[iter][command[iter].size() - 1] == '\\')
+    {
+        //remove backslash from directory
+        directory.erase(directory.size() - 1, 1);
+
+        //check if there is another string to add
+        if(command.size() - 1 >= (iter + 1))
+        {
+            directory += char(32);  //add space
+            directory += command[iter+1];
+        }
+        else
+        {
+            break;
+        }
+        iter++;
+    }
+    if(directory[directory.size() - 1] != '/')
+    {
+        directory += '/';
+    }
+    return directory;
 }
 
 

@@ -21,10 +21,11 @@ public:
 private:
     static void createDirectory(string directory);
     static bool isDirectoryExist(string dirname);
-    static void POSIXSlashes(string *windowsSlashes);
+    static void SlashesConverter(string *windowsSlashes);
     static unsigned int getSize(string fullname);
     static unsigned int getSize(string directory, string file);
     static void preparePath(string *path);
+    static string convertRelativeAbsolutePath(string *directory, string *currentDirectory);
 };
 
 

@@ -12,41 +12,56 @@
 #include <vector>
 #include "Directory.h"
 #include "ServerException.h"
+#include "TerminalUtils.h"
 
-void Directory::createDirectories(string directory, string currentDirectory) {
-    POSIXSlashes(&directory);
+void Directory::removeDirectory(string directory, string currentDirectory) {
+    SlashesConverter(&directory);
+    string newPath = convertRelativeAbsolutePath(&directory, &currentDirectory);
+    newPath += directory;
 
-    //remove first slash
-    if (directory[0] == '/') {
-        directory.erase(0, 1);
+#if DEBUG
+    cout << "Trying to remove " << directory << endl;
+#endif
+
+    if (!isDirectoryExist(directory)) {
+        throw new ServerException("550 Folder nie istnieje.");
     }
-
-    vector<string> splittedDirs;
-    int pos = 0;
-    string newPath(getRootDir());
-    newPath += currentDirectory;
-
-    while ((pos = directory.find("/")) >= 0) {
-        string newDir(directory.substr(0, pos));
-        newPath += newDir;
-        createDirectory(newPath);
-        newPath += "/";
-        directory.erase(0, pos + 1);
-    }
-
-    if (pos == -1) {
-        //no / in directory == no parent directories
-        createDirectory(newPath + directory);
+    if (rmdir(directory.c_str()) == -1) {
+        throw new ServerException("550 Folder nie jest pusty.");
     }
 }
 
+void Directory::createDirectories(string directory, string currentDirectory) {
+    SlashesConverter(&directory);
+    string newPath = convertRelativeAbsolutePath(&directory, &currentDirectory);
+
+    //to make while loop working properly
+    if(directory[directory.size() - 1] != '/')
+    {
+        directory += '/';
+    }
+
+    size_t pos = 0;
+    while ((pos = directory.find("/")) != string::npos) {
+        string newDir(directory.substr(0, (int)pos));
+        newPath += newDir;
+
+#if DEBUG
+        cout << "Trying to create " << newPath << endl;
+#endif
+        createDirectory(newPath);
+        newPath += "/";
+        directory.erase(0, (int)pos + 1);
+    }
+}
+
+//używane tylko z createDirectories
 void Directory::createDirectory(string directory) {
-    POSIXSlashes(&directory);
+    SlashesConverter(&directory);
     string path(directory);
 
     //add root path if doesn't included
-    unsigned long pos = 0;
-    if ((pos = directory.find(getRootDir())) < 0) {
+    if (directory.find(getRootDir()) == string::npos) {
         path = getRootDir() + path;
     }
     if (mkdir(path.c_str(), 0777) < 0) {
@@ -62,14 +77,19 @@ void Directory::createDirectory(string directory) {
 }
 
 
-string Directory::listFiles(string directory,  string currentDirectory) {
+string Directory::listFiles(string directory, string currentDirectory) {
 
-    POSIXSlashes(&directory);
+    SlashesConverter(&directory);
 
-    if(directory == currentDirectory || directory == "/")
+    if(directory == "/")
+    {
+        //listing folderu poczatkowego (root)
+        directory = getRootDir() ;
+    }
+    else if(directory == currentDirectory || directory == "/")
     {
         //chcemy poznać zawartość aktualnego katalogu
-        directory = getRootDir() + currentDirectory + "/";
+        directory = getRootDir() + currentDirectory;
     } else {
         //remove slash at the beginning
         if (directory[0] == '/') {
@@ -102,6 +122,9 @@ string Directory::listFiles(string directory,  string currentDirectory) {
         throw new ServerException("550 Folder nie istnieje!");
     }
 
+#if DEBUG
+    cout << "Trying to list " << directory << endl;
+#endif
 
     if ((dir = opendir(directory.c_str())) != nullptr) {
         char *size = new char[10];
@@ -139,6 +162,39 @@ string Directory::listFiles(string directory,  string currentDirectory) {
     }
     return value;
 }
+
+
+//return value contains / at the end
+string Directory::changeDirectory(string directory) {
+    SlashesConverter(&directory);
+    preparePath(&directory);
+
+    //test
+    //puste
+    //slash
+    //nieistniejace
+    //istniejace
+
+    if(directory == "/" || directory.empty())
+    {
+        return directory;
+    }
+
+
+    string fullPath = getRootDir() + directory;
+
+#if DEBUG
+    cout << "Trying to change dir to " << fullPath << endl;
+#endif
+
+    if(!isDirectoryExist(fullPath))
+    {
+        throw new ServerException("550 Folder nie istnieje.");
+    }
+    return directory;
+}
+
+
 unsigned int Directory::getSize(string directory, string file)
 {
     //dodaj slash na koniec nazwy folderu
@@ -167,8 +223,7 @@ unsigned int Directory::getSize(string fullname)
 
 bool Directory::isDirectoryExist(string dirname) {
     struct stat st = {0};
-    int pos = 0;
-    if ((pos = dirname.find(getRootDir())) < 0) {
+    if (dirname.find(getRootDir()) == string::npos) {
         dirname = getRootDir() + dirname;
     }
     if (stat(dirname.c_str(), &st) == -1) {
@@ -177,40 +232,25 @@ bool Directory::isDirectoryExist(string dirname) {
     return S_ISDIR(st.st_mode);
 }
 
-void Directory::removeDirectory(string directory, string currentDirectory) {
-    POSIXSlashes(&directory);
-    if(currentDirectory == "/")
-    {
-        directory = getRootDir() + directory;
-    }
-    else
-    {
-        directory = getRootDir() + currentDirectory + directory;
-    }
-
-    if (!isDirectoryExist(directory)) {
-        throw new ServerException("550 Folder nie istnieje.");
-    }
-    if (rmdir(directory.c_str()) == -1) {
-        throw new ServerException("550 Folder nie jest pusty.");
-    }
-}
-
-void Directory::POSIXSlashes(string *windowsSlashes) {
-    int pos = 0;
+//converts backslashes to UNIX slashes
+void Directory::SlashesConverter(string *windowsSlashes) {
+    size_t pos = 0;
     if(windowsSlashes->size() == 0)
         return;
     while ((pos = windowsSlashes->find("\\")) >= 0) {
-        windowsSlashes->replace(pos, 1, "/");
+        windowsSlashes->replace((int)pos, 1, "/");
     }
 }
 
 string Directory::getRootDir() {
+    //try to get home from env variable
     char *home = getenv("HOME");
+    //try from passwd structure
     if (home == nullptr) {
         struct passwd *pw = getpwuid(getuid());
         home = pw->pw_dir;
     }
+
     string serverHome(home);
     serverHome += "/ftp_server/";
 
@@ -223,31 +263,7 @@ string Directory::getRootDir() {
     return serverHome;
 }
 
-//return value contains / at the end
-string Directory::changeDirectory(string directory) {
-    POSIXSlashes(&directory);
-    preparePath(&directory);
-
-    //test
-    //puste
-    //slash
-    //nieistniejace
-    //istniejace
-
-    if(directory == "/" || directory.empty())
-    {
-        return directory;
-    }
-
-
-    string fullPath = getRootDir() + directory;
-    if(!isDirectoryExist(fullPath))
-    {
-        throw new ServerException("550 Folder nie istnieje.");
-    }
-    return directory;
-}
-
+//removes unnecessary slashes to avoid troublels with root dir
 void Directory::preparePath(string *path)
 {
     if((*path)[0] == '/')
@@ -258,5 +274,24 @@ void Directory::preparePath(string *path)
     {
         (*path) += '/'; //add slash at the end if doesn't exist
     }
+}
+
+//checks if path is relative or absolute and return proper string
+string Directory::convertRelativeAbsolutePath(string *directory, string *currentDirectory) {
+    string newPath(getRootDir());
+    if ((*directory)[0] == '/') {
+        //sciezka bezwzgledna lub katalog główny
+        directory->erase(0, 1);
+    }else
+    {
+        //sciezka wzgledna
+        if((*currentDirectory) != "/")
+        {
+            //dodaj pwd jezeli nie jest on /,
+            // bo podfoldery nie zawieraja / na poczatku
+            newPath += *currentDirectory;
+        }
+    }
+    return newPath;
 }
 

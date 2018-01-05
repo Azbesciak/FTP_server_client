@@ -12,7 +12,6 @@ using namespace std;
 class FTP {
 public:
     FTP(int socket);
-    void sendInitialMessage();
     void parseCommand(string command);
     void parseCommand(char * command);
     void sendResponse(string message);
@@ -41,6 +40,7 @@ private:
 
     int dataTransferPort;
     string currentDirectory;
+    string getDirectoryWithSpaces(vector<string> command);
 };
 
 
