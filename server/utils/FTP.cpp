@@ -25,43 +25,44 @@ void FTP::parseCommand(char *command) {
 
 void FTP::parseCommand(string command) {
     if (command.size() > 30) {
-        throw new ServerException("500 Komenda za długa.");
+        throw ServerException("500 Komenda za długa.");
     }
 
     vector<string> splittedCommand = splitCommand(command);
+
     if (splittedCommand.empty()) {
-        throw new ServerException("500 Błąd w składni.");
+        throw ServerException("500 Błąd w składni.");
     }
-    int pos = 0;
+
     splittedCommand[0] = toUpper(splittedCommand[0]);
-    if ((pos = splittedCommand[0].find("TYPE")) >= 0) {
+
+    if (splittedCommand[0].find("TYPE") != string::npos) {
         if (splittedCommand.size() < 2) {
-            throw new ServerException("501 Błąd w składni parametrów.");
+            throw ServerException("501 Błąd w składni parametrów.");
         }
         setTransferType(splittedCommand[1]);
-    } else if ((pos = splittedCommand[0].find("MKDIR")) >= 0) {
+    } else if (splittedCommand[0].find("MKDIR") != string::npos) {
         if (splittedCommand.size() < 2) {
-            throw new ServerException("501 Błąd w składni parametrów.");
+            throw ServerException("501 Błąd w składni parametrów.");
         }
         string dirToCreate = getDirectoryWithSpaces(splittedCommand);
         makeDirectory(dirToCreate);
-    } else if ((pos = splittedCommand[0].find("RMDIR")) >= 0) {
+    } else if (splittedCommand[0].find("RMDIR") != string::npos) {
         if (splittedCommand.size() < 2) {
-            throw new ServerException("501 Błąd w składni parametrów.");
+            throw ServerException("501 Błąd w składni parametrów.");
         }
         string directoryToRemove = getDirectoryWithSpaces(splittedCommand);
         removeDirectory(directoryToRemove);
-    } else if ((pos = splittedCommand[0].find("LIST")) >= 0) {
+    } else if (splittedCommand[0].find("LIST") != string::npos) {
         if (splittedCommand.size() < 2) {
             listFiles(currentDirectory);
-        } else
-        {
+        } else {
             listFiles(splittedCommand[1]);
         }
-    } else if((pos = splittedCommand[0].find("PWD")) >= 0)  {
+    } else if(splittedCommand[0].find("PWD") != string::npos)  {
         //wypisz zawartrosc zmiennej currentDirectory
         printDirectory();
-    } else if((pos = splittedCommand[0].find("CWD")) >= 0)
+    } else if(splittedCommand[0].find("CWD") != string::npos)
     {
         if(splittedCommand.size() < 2)
         {
@@ -70,22 +71,22 @@ void FTP::parseCommand(string command) {
         {
             changeDirectory(splittedCommand[1]);    //przejdz do wskazanego przez parametr
         }
-    } else if((pos = splittedCommand[0].find("PORT")) >= 0)
+    } else if(splittedCommand[0].find("PORT") != string::npos)
     {
-        throw new ServerException("500 Niezaimplementowana komenda.");
-    }else if((pos = splittedCommand[0].find("PASSV")) >= 0)
+        throw ServerException("500 Niezaimplementowana komenda.");
+    }else if(splittedCommand[0].find("PASSV") != string::npos)
     {
-        throw new ServerException("500 Niezaimplementowana komenda.");
-    }else if((pos = splittedCommand[0].find("RETR")) >= 0)
+        throw ServerException("500 Niezaimplementowana komenda.");
+    }else if(splittedCommand[0].find("RETR") != string::npos)
     {
         //pobieranie plików z serwera do klienta
-        throw new ServerException("500 Niezaimplementowana komenda.");
-    }else if((pos = splittedCommand[0].find("STOR")) >= 0)
+        throw ServerException("500 Niezaimplementowana komenda.");
+    }else if(splittedCommand[0].find("STOR") != string::npos)
     {
         //wysylanie plikow od klineta na serwer
-        throw new ServerException("500 Niezaimplementowana komenda.");
+        throw ServerException("500 Niezaimplementowana komenda.");
     } else {
-        throw new ServerException("500 Komenda nierozpoznana.");
+        throw ServerException("500 Komenda nierozpoznana.");
     }
 }
 
@@ -130,7 +131,7 @@ void FTP::makeDirectory(string name) {
 //file transfer methods
 void FTP::setTransferType(string type) {
     if (type.size() != 1) {
-        throw new ServerException("501 Błąd w składni parametrów lub argumentów.");
+        throw ServerException("501 Błąd w składni parametrów lub argumentów.");
     }
 
     //to uppercase
@@ -147,7 +148,7 @@ void FTP::setTransferType(string type) {
             sendResponse("200 Type set to I."); //tryb binary
             break;
         default:
-            throw new ServerException("501 Niewspierany tryb pracy.");
+            throw ServerException("501 Niewspierany tryb pracy.");
     }
 }
 

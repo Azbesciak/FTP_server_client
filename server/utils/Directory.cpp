@@ -15,7 +15,7 @@
 #include "TerminalUtils.h"
 
 void Directory::removeDirectory(string directory, string currentDirectory) {
-    SlashesConverter(&directory);
+    slashesConverter(&directory);
     string newPath = convertRelativeAbsolutePath(&directory, &currentDirectory);
     newPath += directory;
 
@@ -24,15 +24,15 @@ void Directory::removeDirectory(string directory, string currentDirectory) {
 #endif
 
     if (!isDirectoryExist(directory)) {
-        throw new ServerException("550 Folder nie istnieje.");
+        throw ServerException("550 Folder nie istnieje.");
     }
     if (rmdir(directory.c_str()) == -1) {
-        throw new ServerException("550 Folder nie jest pusty.");
+        throw ServerException("550 Folder nie jest pusty.");
     }
 }
 
 void Directory::createDirectories(string directory, string currentDirectory) {
-    SlashesConverter(&directory);
+    slashesConverter(&directory);
     string newPath = convertRelativeAbsolutePath(&directory, &currentDirectory);
 
     //to make while loop working properly
@@ -57,7 +57,7 @@ void Directory::createDirectories(string directory, string currentDirectory) {
 
 //używane tylko z createDirectories
 void Directory::createDirectory(string directory) {
-    SlashesConverter(&directory);
+    slashesConverter(&directory);
     string path(directory);
 
     //add root path if doesn't included
@@ -71,38 +71,37 @@ void Directory::createDirectory(string directory) {
             errorMsg += directory + ". ";
             errorMsg += strerror(errno);
             errorMsg += ".";
-            throw new ServerException(errorMsg);
+            throw ServerException(errorMsg);
         }
     }
 }
 
-
+/*
+ * list /   -> listuje katalog głowny
+ * list     -> listuje aktualny katalog
+ * list dir -> listuje podkatalog dir
+ */
 string Directory::listFiles(string directory, string currentDirectory) {
 
-    SlashesConverter(&directory);
+    slashesConverter(&directory);
 
     if(directory == "/")
     {
         //listing folderu poczatkowego (root)
         directory = getRootDir() ;
     }
-    else if(directory == currentDirectory || directory == "/")
+    else if(directory == currentDirectory)
     {
         //chcemy poznać zawartość aktualnego katalogu
         directory = getRootDir() + currentDirectory;
     } else {
-        //remove slash at the beginning
-        if (directory[0] == '/') {
-            directory.erase(0, 1);
-        }
-        //add slash at the end
-        if (directory[directory.size() - 1] != '/') {
-            directory += '/';
-        }
+        //chcemy poznac zawartosc podkatalogu w którym się znajdujemy
 
-        int pos = 0;
+        //slash - usun na poczatku, dodaj na koncu
+        preparePath(&directory);
+
         //add root prefix
-        if ((pos = directory.find(getRootDir())) < 0) {
+        if ( directory.find(getRootDir()) == string::npos) {
             if(currentDirectory == "/")
             {
                 directory = getRootDir() + directory;
@@ -113,13 +112,12 @@ string Directory::listFiles(string directory, string currentDirectory) {
         }
     }
 
-
     DIR *dir;
     struct dirent *ent;
-    string value = "";
+    string value;
     if(!isDirectoryExist(directory))
     {
-        throw new ServerException("550 Folder nie istnieje!");
+        throw ServerException("550 Folder nie istnieje!");
     }
 
 #if DEBUG
@@ -127,7 +125,7 @@ string Directory::listFiles(string directory, string currentDirectory) {
 #endif
 
     if ((dir = opendir(directory.c_str())) != nullptr) {
-        char *size = new char[10];
+        auto *size = new char[10];
         while ((ent = readdir(dir)) != nullptr) {
             //nie wypisuj folderów specjalnych
             if(strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
@@ -158,7 +156,7 @@ string Directory::listFiles(string directory, string currentDirectory) {
         delete []size;
         closedir(dir);
     } else {
-        throw new ServerException("550 Nie można uzyskać dostępu do folderu.");
+        throw ServerException("550 Nie można uzyskać dostępu do folderu.");
     }
     return value;
 }
@@ -166,16 +164,10 @@ string Directory::listFiles(string directory, string currentDirectory) {
 
 //return value contains / at the end
 string Directory::changeDirectory(string directory) {
-    SlashesConverter(&directory);
+    slashesConverter(&directory);
     preparePath(&directory);
 
-    //test
-    //puste
-    //slash
-    //nieistniejace
-    //istniejace
-
-    if(directory == "/" || directory.empty())
+    if(directory == "/")
     {
         return directory;
     }
@@ -189,7 +181,7 @@ string Directory::changeDirectory(string directory) {
 
     if(!isDirectoryExist(fullPath))
     {
-        throw new ServerException("550 Folder nie istnieje.");
+        throw ServerException("550 Folder nie istnieje.");
     }
     return directory;
 }
@@ -217,7 +209,7 @@ unsigned int Directory::getSize(string fullname)
     {
         return (unsigned int)st.st_size;
     }else{
-        throw new ServerException("550 Plik nie istnieje.");
+        throw ServerException("550 Plik nie istnieje.");
     }
 }
 
@@ -233,11 +225,11 @@ bool Directory::isDirectoryExist(string dirname) {
 }
 
 //converts backslashes to UNIX slashes
-void Directory::SlashesConverter(string *windowsSlashes) {
+void Directory::slashesConverter(string *windowsSlashes) {
     size_t pos = 0;
-    if(windowsSlashes->size() == 0)
+    if(windowsSlashes->empty())
         return;
-    while ((pos = windowsSlashes->find("\\")) >= 0) {
+    while ((pos = windowsSlashes->find("\\")) != string::npos) {
         windowsSlashes->replace((int)pos, 1, "/");
     }
 }

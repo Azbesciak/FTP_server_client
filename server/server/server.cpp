@@ -23,8 +23,7 @@
 int runserver = 1;
 
 int main(int argc, char *argv[]) {
-    string command = "";
-    //Directory::listFiles();
+    string command;
     char *serverAddr = argc == 3 ? argv[1] : (char *) DEFAULT_ADDR;
     int port = argc == 2 ? atoi(argv[1]) : (argc == 3 ? atoi(argv[2]) : DEFAULT_PORT);
 
@@ -37,8 +36,7 @@ int main(int argc, char *argv[]) {
 
     }
 
-
-    pthread_cancel(serverThread);
+    pthread_cancel(static_cast<pthread_t>(serverThread));
     return 0;
 }
 
@@ -50,7 +48,7 @@ int createServerThread(char *addr, int port) {
     serverOpts->addr = addr;
     serverOpts->port = port;
     //tworzy watek dla serwera
-    int create_result = pthread_create(&serverThread, NULL, startServer, (void *) serverOpts);
+    int create_result = pthread_create(&serverThread, nullptr, startServer, (void *) serverOpts);
     if (create_result != 0) {
         printf("Błąd przy próbie utworzenia wątku dla serwera, kod błędu: %d\n", create_result);
     } else {
@@ -67,10 +65,11 @@ void cleanRoutine(void *arg) {
 void *startServer(void *serverOpts) {
 
 
-    server_opts *options = (server_opts *) serverOpts;
+    auto *options = (server_opts *) serverOpts;
     printf("Serwer FTP działa na adresie: %s:%d\n", options->addr, options->port);
 
-    struct sockaddr_in sockAddr, remote;
+    struct sockaddr_in sockAddr;
+    struct sockaddr_in remote{};
 
     int socketNum = socket(AF_INET, SOCK_STREAM, 0);
     if (socketNum < 0) {
@@ -82,7 +81,7 @@ void *startServer(void *serverOpts) {
     memset(&sockAddr, 0, sizeof(sockAddr));
     sockAddr.sin_family = AF_INET;
     inet_pton(AF_INET, options->addr, &sockAddr.sin_addr);
-    sockAddr.sin_port = htons(options->port);
+    sockAddr.sin_port = htons(static_cast<uint16_t>(options->port));
     sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     //bindowanie do socketu
@@ -114,7 +113,7 @@ void *startServer(void *serverOpts) {
             printf("Podłączono klienta z adresem %s. Przypisany deskryptor %d\n", remoteAddr, connection_descriptor);
             handleConnection(connection_descriptor, &remote);
         }
-    pthread_cleanup_pop(1);
+    pthread_cleanup_pop(true);
     close(socketNum);
     exit(0);
 
@@ -137,7 +136,7 @@ void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remo
     t_data->remote = remote;
 
     //tworzy watek dla nowego klienta
-    create_result = pthread_create(&clientThread, NULL, connection, (void *) t_data);
+    create_result = pthread_create(&clientThread, nullptr, connection, (void *) t_data);
     if (create_result != 0) {
         printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", create_result);
         exit(-1);
@@ -147,26 +146,26 @@ void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remo
 //funkcja opisującą zachowanie wątku - musi przyjmować argument typu (void *) i zwracać (void *)
 void *connection(void *t_data) {
     pthread_detach(pthread_self());
-    struct thread_data_t *th_data = (struct thread_data_t *) t_data;
+    auto *th_data = (struct thread_data_t *) t_data;
 
     char remoteAddr[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(th_data->remote->sin_addr), remoteAddr, INET_ADDRSTRLEN);
 
     cout << "Inicjalizacja się powiodła. Deskryptor " << GREEN_TEXT(th_data->socketDescriptor) <<", trafił z adresu "<< GREEN_TEXT(remoteAddr) <<".\n";
 
-    char *buffer = new char[BUFFER_SIZE];
+    auto *buffer = new char[BUFFER_SIZE];
     int keepConnection = 1;
-    FTP *ftpClient = new FTP(th_data->socketDescriptor);
+    auto *ftpClient = new FTP(th_data->socketDescriptor);
 
     //main loop
     while (keepConnection > 0) {
-        int value = read(th_data->socketDescriptor, buffer, BUFFER_SIZE);
+        ssize_t value = read(th_data->socketDescriptor, buffer, BUFFER_SIZE);
         if (value > 0) {
             displayRequest(th_data->socketDescriptor, buffer);
             try {
                 ftpClient->parseCommand(buffer);
-            } catch (ServerException *errorMessage) {
-                ftpClient->sendResponse(errorMessage->what());
+            } catch (ServerException& errorMessage) {
+                ftpClient->sendResponse(errorMessage.what());
             } catch (...) {
                 ftpClient->sendResponse("500 Nieznany problem.");
             }
@@ -187,13 +186,12 @@ void *connection(void *t_data) {
 
 
 void parseCommand(string command) {
-    int pos = 0;
-    if ((pos = command.find("restart")) >= 0) {
+    if (command.find("restart") != string::npos) {
         cout << GREEN_TEXT("Restartowanie serwera.\n");
         runserver = 0;
         sleep(1);
         runserver = 1;
-    }else if((pos = command.find("stop")) >= 0)
+    }else if(command.find("stop") != string::npos)
     {
         cout << GREEN_TEXT("Zatrzymywanie serwera.\n");
         runserver = 0;

@@ -21,7 +21,7 @@ public:
 private:
     static void createDirectory(string directory);
     static bool isDirectoryExist(string dirname);
-    static void SlashesConverter(string *windowsSlashes);
+    static void slashesConverter(string *windowsSlashes);
     static unsigned int getSize(string fullname);
     static unsigned int getSize(string directory, string file);
     static void preparePath(string *path);

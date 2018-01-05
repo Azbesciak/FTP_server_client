@@ -11,7 +11,7 @@ using namespace std;
 
 class FTP {
 public:
-    FTP(int socket);
+    explicit FTP(int socket);
     void parseCommand(string command);
     void parseCommand(char * command);
     void sendResponse(string message);
