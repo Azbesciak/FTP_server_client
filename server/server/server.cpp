@@ -157,7 +157,6 @@ void *connection(void *t_data) {
     char *buffer = new char[BUFFER_SIZE];
     int keepConnection = 1;
     FTP *ftpClient = new FTP(th_data->socketDescriptor);
-    ftpClient->sendInitialMessage();
 
     //main loop
     while (keepConnection > 0) {

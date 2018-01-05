@@ -29,7 +29,7 @@ void FTP::parseCommand(string command) {
     }
 
     vector<string> splittedCommand = splitCommand(command);
-    if (splittedCommand.size() == 0) {
+    if (splittedCommand.empty()) {
         throw new ServerException("500 Błąd w składni.");
     }
     int pos = 0;
@@ -53,34 +53,30 @@ void FTP::parseCommand(string command) {
     } else if ((pos = splittedCommand[0].find("LIST")) >= 0) {
         if (splittedCommand.size() < 2) {
             listFiles(currentDirectory);
+        } else
+        {
+            listFiles(splittedCommand[1]);
         }
-        listFiles(splittedCommand[1]);
-    } else if((pos = splittedCommand[0].find("PWD")) >= 0)
-    {
+    } else if((pos = splittedCommand[0].find("PWD")) >= 0)  {
+        //wypisz zawartrosc zmiennej currentDirectory
         printDirectory();
     } else if((pos = splittedCommand[0].find("CWD")) >= 0)
     {
         if(splittedCommand.size() < 2)
         {
-            changeDirectory("/");
+            changeDirectory("/");   //brak parametru, przejdz do glownego
+        } else
+        {
+            changeDirectory(splittedCommand[1]);    //przejdz do wskazanego przez parametr
         }
-        changeDirectory(splittedCommand[1]);
     } else {
         throw new ServerException("500 Komenda nierozpoznana.");
     }
 }
 
-void FTP::sendInitialMessage() {
-    ;//sendResponse("Serwer działa.");
-}
-
-
-FTP::FTP(int socket) : stringToFunction(create_stringToFunctionMap()) {
-/*FTP::FTP(int socket) { */
+FTP::FTP(int socket) {
     this->socket = socket;
     currentDirectory = "/";
-    //TODO fix mapping, now using simple if's
-    //stringToFunction.insert(make_pair("MKD", &FTP::makeDirectory ));
 }
 
 void FTP::sendResponse(string message) {
@@ -89,7 +85,7 @@ void FTP::sendResponse(string message) {
     write(socket, message.c_str(), message.size());
 }
 
-
+//rozbija komende na zbior wyrazen, co spacje
 vector<string> FTP::splitCommand(string command) {
     vector<string> pieces;
     istringstream iss(command);
@@ -99,20 +95,18 @@ vector<string> FTP::splitCommand(string command) {
     return pieces;
 }
 
-
-map<string, FTP::CommandAction> FTP::create_stringToFunctionMap() {
-    map<string, CommandAction> temp;
-    temp.insert(pair<string, CommandAction>("MKD", &FTP::makeDirectory));
-    return temp;
-}
-
 //directory methods
 void FTP::removeDirectory(string name) {
     Directory::removeDirectory(name);
     sendResponse("200 OK");
 }
-
-//throws ServerException if
+/*
+ * Tworzy folder/foldery.
+ * Składnia nazwaFolderu/[nazwa kolejnego folderu]/
+ * Jeżeli dany folder istnieje to zwraca 200 OK
+ * Zwraca wyjątek tylko w przypadku braku uprawnień do tworzenia folderu.
+ *
+ */
 void FTP::makeDirectory(string name) {
     Directory::createDirectories(name);
     sendResponse("200 OK");
@@ -131,27 +125,42 @@ void FTP::setTransferType(string type) {
     switch (type[0]) {
         case 'A':
             transferType = 'A';
-            sendResponse("200 Type set to A.");
+            sendResponse("200 Type set to A."); //tryb ASCII
             break;
         case 'I':
             transferType = 'I';
-            sendResponse("200 Type set to I.");
+            sendResponse("200 Type set to I."); //tryb binary
             break;
         default:
             throw new ServerException("501 Niewspierany tryb pracy.");
     }
 }
 
+/*
+ * Listuje pliki z podanego folderu.
+ * dirName jest ścieżką względną. (Względem PWD).
+ */
 void FTP::listFiles(string dirName) {
     string list = Directory::listFiles(dirName);
     sendResponse(list);
 }
 
+/*
+ * Zmienia bieżący katalog.
+ * Parametr jest ścieżką bezwzględną.
+ *
+ */
 void FTP::changeDirectory(string name) {
     currentDirectory = Directory::ChangeDirectory(name);
     sendResponse("200 OK");
 }
 
+/*
+ * Wypisuje aktualny katalog, przy czym
+ * będąc w katalogu głównym wypisuje -> /
+ * będą poza katalogiem głównym nie wypisują wiodącego /
+ * znajdując się w folderze folder1 wypisze folder1/
+ */
 void FTP::printDirectory() {
     sendResponse(currentDirectory);
 }

@@ -7,7 +7,6 @@
 
 #include <iostream>
 
-#define FILTER_NOT_ALLOWED_FILES 4
 using namespace std;
 
 class Directory {
@@ -18,15 +17,14 @@ public:
     static void removeDirectory(string directory);
     static void createDirectory(string directory);
     static string listFiles(string directory);
-
     static string ChangeDirectory(string directory);
 
 private:
     static bool isDirectoryExist(string dirname);
     static void POSIXSlashes(string *windowsSlashes);
-    static int getFileSize(string fullname);
-
-    static int getFileSize(string directory, string file);
+    static unsigned int getSize(string fullname);
+    static unsigned int getSize(string directory, string file);
+    static void preparePath(string *path);
 };
 
 

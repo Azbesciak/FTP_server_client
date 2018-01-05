@@ -1,7 +1,7 @@
 CC = $(CXX)
 OUT_DIR = bin
 INC_DIR = -Iutils
-CFLAGS = -Wall -pthread $(INC_DIR) -std=c++11
+CFLAGS = -Weverything -pthread $(INC_DIR) -std=c++11
 CPP = server/server.cpp utils/*.cpp
 all:	Server
 Server:		server/server.cpp

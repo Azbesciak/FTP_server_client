@@ -10,7 +10,6 @@
 #include <cstring>
 #include <iterator>
 #include <vector>
-#include <stdlib.h>
 #include "Directory.h"
 #include "ServerException.h"
 
@@ -44,7 +43,7 @@ void Directory::createDirectory(string directory) {
     string path(directory);
 
     //add root path if doesn't included
-    int pos = 0;
+    unsigned long pos = 0;
     if ((pos = directory.find(getRootDir())) < 0) {
         path = getRootDir() + path;
     }
@@ -95,9 +94,9 @@ string Directory::listFiles(string directory) {
     }
 
 
-    if ((dir = opendir(directory.c_str())) != NULL) {
+    if ((dir = opendir(directory.c_str())) != nullptr) {
         char *size = new char[10];
-        while ((ent = readdir(dir)) != NULL) {
+        while ((ent = readdir(dir)) != nullptr) {
             //nie wypisuj folderów specjalnych
             if(strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
             {
@@ -120,7 +119,7 @@ string Directory::listFiles(string directory) {
             value += ent->d_name;   //dodaj nazwe
             value += "/";
             memset(size, 0, 10);
-            sprintf(size, "%d", getFileSize(directory, ent->d_name));
+            sprintf(size, "%d", getSize(directory, ent->d_name));
             value += size;
             value += char(3);
         }
@@ -131,7 +130,7 @@ string Directory::listFiles(string directory) {
     }
     return value;
 }
-int Directory::getFileSize(string directory, string file)
+unsigned int Directory::getSize(string directory, string file)
 {
     if(directory[directory.size() - 1] != '/')
     {
@@ -141,15 +140,15 @@ int Directory::getFileSize(string directory, string file)
     {
         file.erase(0, 1);
     }
-    return getFileSize(directory + file);
+    return getSize(directory + file);
 }
 
-int Directory::getFileSize(string fullname)
+unsigned int Directory::getSize(string fullname)
 {
     struct stat st = {0};
     if(stat(fullname.c_str(), &st) != -1)
     {
-        return st.st_size;
+        return (unsigned int)st.st_size;
     }else{
         throw new ServerException("550 Plik nie istnieje.");
     }
@@ -208,6 +207,8 @@ string Directory::getRootDir() {
 //return value contains / at the end
 string Directory::ChangeDirectory(string directory) {
     POSIXSlashes(&directory);
+    preparePath(&directory);
+
     //test
     //puste
     //slash
@@ -219,20 +220,24 @@ string Directory::ChangeDirectory(string directory) {
         return directory;
     }
 
-    if(directory[0] == '/')
-    {
-        directory.erase(0,1);   //remove first slash if exists
-    }
-    if(directory[directory.size() - 1] != '/')
-    {
-        directory += '/'; //add slash at the end if doesn't exist
-    }
 
     string fullPath = getRootDir() + directory;
-    if(!isDirectoryExist(fullPath.c_str()))
+    if(!isDirectoryExist(fullPath))
     {
         throw new ServerException("550 Folder nie istnieje.");
     }
     return directory;
+}
+
+void Directory::preparePath(string *path)
+{
+    if((*path)[0] == '/')
+    {
+        path->erase(0,1);   //remove first slash if exists
+    }
+    if((*path)[path->size() - 1] != '/')
+    {
+        (*path) += '/'; //add slash at the end if doesn't exist
+    }
 }
 
