@@ -1,8 +1,11 @@
 package sample;
 
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import javafx.fxml.FXML;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import sun.reflect.generics.tree.Tree;
 
 import java.io.*;
 import java.net.Socket;
@@ -24,6 +27,7 @@ public class Connection implements  Runnable {
     private BufferedReader reader;
     public String command;
     public String argument;
+    public TreeItem<File> fileToUpload;
 
     public Connection(String addr,String port)
     {
@@ -56,6 +60,14 @@ public class Connection implements  Runnable {
             if(command=="MKD")
             {
                 mkd();
+            }
+            if(command=="PASV")
+            {
+                pasv();
+            }
+            if(command=="MODE")
+            {
+                setTransmissionMode();
             }
 //
         } catch (Exception e) {
@@ -149,6 +161,74 @@ public class Connection implements  Runnable {
         String command="MKD "+argument;
         writer.println(command);
         message = reader.readLine();
+    }
+
+    public void pasv() throws IOException{
+        String command="PASV";
+        writer.println(command);
+        message = reader.readLine();
+    }
+
+    public void pwd() throws IOException{
+        String command="PWD";
+        writer.println(command);
+        message = reader.readLine();
+    }
+
+    public void setTransmissionMode() throws IOException{
+        String command="TYPE ";
+        if(argument=="ASCII"){
+            command+="A";
+        }
+        else
+        {
+            command+="I";
+        }
+        writer.println(command);
+        message = reader.readLine();
+    }
+    public void stor(TreeItem<File> f) throws IOException{
+        if(f.getValue().isDirectory()==true)
+        {
+            //stworz folder i wejdź w niego
+            argument = getFileName(f);
+            mkd();
+            cwd();
+            for(TreeItem file : fileToUpload.getChildren())
+            {
+                stor(file);
+            }
+            //po przetworzeniu wszystkich dzieci wejdź na serwerze poziom wyżej
+            pwd();
+            String pom[] = message.split("/");
+            String dir="";
+            for(int i=0;i<pom.length-1;i++)
+            {
+                dir+=pom[i];
+            }
+            argument = dir;
+            cwd();
+        }
+        else
+        {
+            DataOutputStream dos = new DataOutputStream(client.getOutputStream());
+            FileInputStream fis = new FileInputStream(f.getValue());
+            byte[] buffer = new byte[4096];
+
+            while (fis.read(buffer) > 0) {
+                dos.write(buffer);
+            }
+            fis.close();
+            dos.close();
+        }
+
+    }
+
+    public String getFileName(TreeItem file)
+    {
+        String pom[]=file.getValue().toString().split("/");
+        String name = pom[pom.length-1];
+        return name;
     }
 
 }

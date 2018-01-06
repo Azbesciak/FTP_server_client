@@ -27,8 +27,12 @@ public class MainScene {
     public Button addLocalFolder;
     public TextField fileName;
     public TreeView serverFiles;
+    public RadioButton ascii;
+    public RadioButton binary;
+    private ToggleGroup group;
     @FXML
     private Button connect;
+    private TreeItem<File> selectedLocalFile;
     public TextField LocalPath;
     private Connection connection;
     @FXML
@@ -39,6 +43,11 @@ public class MainScene {
     private void initialize()
     {
         files.setRoot(getRootDir());
+        group=new ToggleGroup();
+        binary.setToggleGroup(group);
+        binary.setUserData("BINARY");
+        ascii.setToggleGroup(group);
+        ascii.setUserData("ASCII");
         files.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
@@ -137,7 +146,7 @@ public class MainScene {
                 }
                 catch (InterruptedException e2)
                 {
-                    e2.printStackTrace();
+                  //  e2.printStackTrace();
                 }
 
             }
@@ -146,7 +155,7 @@ public class MainScene {
 
 
 
-    public void RemoveServerDir() throws InterruptedException {
+    public void removeServerDir() throws InterruptedException {
         String dir = RemotePath.getText();
         System.out.println(dir);
         connection.command="RMD";
@@ -160,7 +169,7 @@ public class MainScene {
         }
     }
     @FXML
-    public void MakeServerDir() throws  InterruptedException{
+    public void makeServerDir() throws  InterruptedException{
         String dir = RemotePath.getText();
         connection.command="MKD";
         connection.argument=dir;
@@ -171,6 +180,34 @@ public class MainScene {
             activeNode.setExpanded(false);
             activeNode.setExpanded(true);
         }
+    }
+
+    public void upload() throws InterruptedException, IOException {
+        String port = passiveModePort();
+        String addr = connection.addr;
+        Connection uploadConnection = new Connection(addr,port);
+        uploadConnection.connect();
+//        uploadConnection.command="MODE";
+//        uploadConnection.argument=group.getSelectedToggle().getUserData().toString();
+//        uploadConnection.setTransmissionMode();
+//        uploadConnection.fileToUpload = selectedLocalFile;
+    }
+
+
+
+
+    public String passiveModePort() throws InterruptedException {
+        connection.command="PASV";
+        Thread thread = new Thread(connection);
+        thread.start();
+        thread.join();
+        String input[] = connection.message.split(" ");
+        String pom[] = input[1].split(",");
+        Integer p1= Integer.valueOf(pom[0]);
+        Integer p2= Integer.valueOf(pom[1].substring(0,pom[1].length()-1));
+        Integer port = p1*256+p2;
+        return port.toString();
+
     }
     private TreeItemExtended<String> initServerFiles(String input)
     {
@@ -209,9 +246,8 @@ public class MainScene {
             serverFiles.refresh();
 
         }
-
-
     }
+
 
     public final String rootDir = "ftp_client_root_dir\\";
 
@@ -272,10 +308,12 @@ public class MainScene {
                 public void changed(ObservableValue observable, Object oldValue,
                                     Object newValue) {
 
-                    TreeItem file = (TreeItem) newValue;
+                    TreeItem<File> file = (TreeItem) newValue;
                     fileName.setText(file.getValue().toString());
-                    upload.setDisable(true);
-                    download.setDisable(false);
+                    System.out.println(file.getValue().toString());
+                    upload.setDisable(false);
+                    download.setDisable(true);
+                    selectedLocalFile = file;
                 }
 
             });
@@ -289,8 +327,8 @@ public class MainScene {
                 TreeItemExtended file = (TreeItemExtended) newValue;
                 if(file!=serverFiles.getRoot() && file.getValue()!=null) {
                     fileName.setText("/" + getDir(file) + file.getValue().toString());
-                    upload.setDisable(false);
-                    download.setDisable(true);
+                    upload.setDisable(true);
+                    download.setDisable(false);
                 }
             }
 
