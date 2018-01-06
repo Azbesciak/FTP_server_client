@@ -1,6 +1,6 @@
 CC = $(CXX)
 OUT_DIR = bin
-INC_DIR = -Iutils
+INC_DIR = -Iutils -Iserver
 CPPFLAGS = -Wall -Weffc++  -pthread $(INC_DIR) -std=c++11
 CPP = server/Server.cpp utils/*.cpp
 all:	Server

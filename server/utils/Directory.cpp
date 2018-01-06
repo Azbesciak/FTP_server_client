@@ -162,16 +162,25 @@ string Directory::listFiles(string directory, string currentDirectory) {
 
 
 //return value contains / at the end
-string Directory::changeDirectory(string directory) {
+string Directory::changeDirectory(string directory, string currentDirectory) {
     slashesConverter(&directory);
-    preparePath(&directory);
 
-    if (directory == "/") {
+    if(directory == "/")
+    {
         return directory;
     }
 
+    bool relative = false;
+    if(directory[0] != '/')
+    {
+        //sciezka wzgledna
+        relative = true;
+    }
 
-    string fullPath = getRootDir() + directory;
+    //convertRelativeAbsolutePath manipulates directory
+    string fullPath = convertRelativeAbsolutePath(&directory, &currentDirectory);
+    fullPath += directory;
+
 
 #if DEBUG
     cout << "Trying to change dir to " << fullPath << endl;
@@ -180,7 +189,15 @@ string Directory::changeDirectory(string directory) {
     if (!isDirectoryExist(fullPath)) {
         throw ServerException("550 Folder nie istnieje.");
     }
-    return directory;
+
+    //currentDirectory == /
+    //to nie dodawaj slasha na poczatku
+    if(currentDirectory == "/")
+    {
+        currentDirectory = "";
+    }
+
+    return relative ? currentDirectory + directory : directory;
 }
 
 

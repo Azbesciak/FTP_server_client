@@ -11,10 +11,12 @@ using namespace std;
 
 class FTP {
 public:
-    explicit FTP(int socket);
+    FTP();
+    explicit FTP(int socket);   //always use to proper initialization
     void parseCommand(string command);
     void parseCommand(char * command);
     void sendResponse(string message);
+    void killDataConnectionThreads();
 private:
     vector<string> splitCommand(string command);
     string toUpper(string data);
@@ -38,7 +40,6 @@ private:
     //I = Binary
     char transferType = 0;
 
-    int dataTransferPort;
     string currentDirectory;
     string getDirectoryWithSpaces(vector<string> command);
 
@@ -53,20 +54,37 @@ private:
     uint16_t dataConnectionPort;
 
     //threads
+        //used both in upload and download thread
+    struct sockaddr_in remote{};
+    bool dataConnectionOpened;
+    int dataConnectionSocket;
     enum ThreadType
     {
         Download,
         Upload
     };
+    //controlled by threads
     bool uploadThreadActive = false;
     bool downloadThreadActive = false;
-    pthread_t downloadThreadHandle;
-    pthread_t uploadThreadHandle;
+
+    //controlled by instance in main client's thread
+    bool tryToDownloadFile = false;
+    bool tryToUploadFile = false;
+
+    pthread_t downloadThreadHandle = 0;
+    pthread_t uploadThreadHandle = 0;
     string fileToUpload;
     string fileToDownload;
     int createThread(ThreadType threadType);
     void *uploadThread(void *args);
     void *downloadThread(void *args);
+    //wrappers to threads
+    static void* newUploadThreadWrapper(void *object);
+    static void *newDownloadThreadWrapper(void *object);
+
+    void prepareFileToDownload();
+
+    void setUpSocketForDataConnection();
 };
 
 
