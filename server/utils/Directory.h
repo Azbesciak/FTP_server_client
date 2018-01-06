@@ -18,9 +18,13 @@ public:
     static string listFiles(string directory, string currentDirectory);
     static string changeDirectory(string directory);
 
+    static bool isFileExist(string filename);
+
 private:
     static void createDirectory(string directory);
     static bool isDirectoryExist(string dirname);
+    static bool isDescriptorExist(string descriptor, struct stat *st);
+
     static void slashesConverter(string *windowsSlashes);
     static unsigned int getSize(string fullname);
     static unsigned int getSize(string directory, string file);

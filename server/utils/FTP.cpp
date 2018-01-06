@@ -7,7 +7,6 @@
 #include <iostream>
 #include <iterator>
 #include <sstream>
-
 #include <arpa/inet.h>
 
 //first method to display interface addr
@@ -18,11 +17,13 @@
 //second method
 #include <fstream>
 
-
+//my includes
 #include "FTP.h"
 #include "Directory.h"
 #include "ServerException.h"
 #include "TerminalUtils.h"
+
+vector<uint16_t> FTP::dataConnectionPorts;
 
 string FTP::toUpper(string data) {
     std::transform(data.begin(), data.end(), data.begin(), ::toupper);
@@ -35,7 +36,7 @@ void FTP::parseCommand(char *command) {
 }
 
 void FTP::parseCommand(string command) {
-    if (command.size() > 30) {
+    if (command.size() > 280) {
         throw ServerException("500 Komenda za długa.");
     }
 
@@ -68,6 +69,7 @@ void FTP::parseCommand(string command) {
         if (splittedCommand.size() < 2) {
             listFiles(currentDirectory);
         } else {
+            //string directory = getDirectoryWithSpaces(splittedCommand);
             listFiles(splittedCommand[1]);
         }
     } else if (splittedCommand[0].find("PWD") != string::npos) {
@@ -79,6 +81,7 @@ void FTP::parseCommand(string command) {
             changeDirectory("/");   //brak parametru, przejdz do glownego
         } else
         {
+            //string directory
             changeDirectory(splittedCommand[1]);    //przejdz do wskazanego przez parametr
         }
     } else if (splittedCommand[0].find("PASSV") != string::npos) {
@@ -102,6 +105,7 @@ void FTP::parseCommand(string command) {
 
 FTP::FTP(int socket) : socketDescriptor(socket) {
     currentDirectory = "/";
+    dataConnectionPort = 0;
 }
 
 void FTP::sendResponse(string message) {
@@ -112,7 +116,13 @@ void FTP::sendResponse(string message) {
 
 
 void FTP::putFile(string filename) {
-    throw ServerException("500 Niezaimplementowana komenda.");
+    if(!uploadThreadActive) {
+        createThread(ThreadType::Upload);
+    }
+
+    //TODO mutex
+
+    fileToUpload = filename;
 
     //send 226 reply after sending data
 }
@@ -164,8 +174,9 @@ void FTP::setTransferType(string type) {
 }
 
 /*
- * Listuje pliki z podanego folderu.
- * dirName jest ścieżką względną. (Względem PWD).
+ * list /   -> listuje katalog głowny
+ * list     -> listuje aktualny katalog
+ * list dir -> listuje podkatalog dir
  */
 void FTP::listFiles(string dirName) {
     string list = Directory::listFiles(dirName, currentDirectory);
@@ -336,7 +347,7 @@ string FTP::getRandomPort() {
     } while (isPortReserved(port));
 
     //add port to global ports
-    dataConnectionPorts.push_back(port);
+    FTP::dataConnectionPorts.push_back(port);
 
     string portStr;
     auto *temp = new char[20];
@@ -352,4 +363,49 @@ string FTP::getRandomPort() {
     delete[]temp;
     return portStr;
 }
+
+int FTP::createThread(ThreadType threadType) {
+    //tworzy watek dla serwera
+
+    int create_result;
+    switch(threadType)
+    {
+        case ThreadType::Download:
+            //create_result = pthread_create(&downloadThreadHandle, nullptr, downloadThread, (void *)"sss");
+            break;
+        case ThreadType ::Upload:
+            //create_result = pthread_create(&uploadThreadHandle, nullptr, uploadThread, (void *)"sss");
+            break;
+        default:
+            throw new ServerException("Unknown ThreadType when creating data connection thread.");
+    }
+
+    if (create_result != 0) {
+        throw new ServerException("Błąd przy próbie utworzenia wątku dla serwera, kod błędu: " + create_result);
+    } else {
+#if DEBUG
+        cout << "Creted successfully " << (threadType == ThreadType::Upload ? " upload " : " download ")
+             << "thread for client " << socketDescriptor << endl;
+#endif
+    }
+    return create_result;
+}
+
+void *FTP::uploadThread(void *args) {
+
+    uploadThreadActive = true; //TODO mutex
+
+
+
+    uploadThreadActive = false;
+}
+
+void *FTP::downloadThread(void *args) {
+
+    downloadThreadActive = true; //TODO mutex
+
+
+
+    downloadThreadActive = false;}
+
 
