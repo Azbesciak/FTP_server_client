@@ -94,7 +94,7 @@ void FTP::parseCommand(string command) {
             string directory = getDirectoryWithSpaces(splittedCommand);
             changeDirectory(directory);    //przejdz do wskazanego przez parametr
         }
-    } else if (splittedCommand[0].find("PASSV") != string::npos) {
+    } else if (splittedCommand[0].find("PASV") != string::npos) {
         sendPASSVResponse();
     } else if (splittedCommand[0].find("RETR") != string::npos) {
         //wysylanie plików z serwera do klienta
@@ -450,7 +450,6 @@ void *FTP::uploadThread(void *args) {
     if (connection_descriptor < 0) {
         perror("Client accepting error");
         dataConnectionOpened = 0;
-
     }
 
     //zapisnie adresu
