@@ -210,13 +210,28 @@ unsigned int Directory::getSize(string fullname)
 
 bool Directory::isDirectoryExist(string dirname) {
     struct stat st = {0};
-    if (dirname.find(getRootDir()) == string::npos) {
-        dirname = getRootDir() + dirname;
+    if(!isDescriptorExist(dirname))
+        return false;
+
+    return S_ISDIR(st.st_mode);
+}
+bool Directory::isFileExist(string dirname) {
+    struct stat st = {0};
+    if(!isDescriptorExist(dirname))
+        return false;
+
+    return S_ISREG(st.st_mode);
+}
+
+bool Directory::isDescriptorExist(string descriptor) {
+    struct stat st = {0};
+    if (descriptor.find(getRootDir()) == string::npos) {
+        descriptor = getRootDir() + descriptor;
     }
-    if (stat(dirname.c_str(), &st) == -1) {
+    if (stat(descriptor.c_str(), &st) == -1) {
         return false;
     }
-    return S_ISDIR(st.st_mode);
+    return true;
 }
 
 //converts backslashes to UNIX slashes

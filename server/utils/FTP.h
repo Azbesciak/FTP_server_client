@@ -17,7 +17,6 @@ public:
     void sendResponse(string message);
 private:
     vector<string> splitCommand(string command);
-
     string toUpper(string data);
 
     int socketDescriptor;
@@ -30,9 +29,7 @@ private:
 
     //file transfer stuff
     void setTransferType(string type);
-
     void putFile(string filename);
-
     void getFile(string filename);
 
     void listFiles(string dirName);
@@ -49,14 +46,27 @@ private:
     void sendPASSVResponse();
 
     string getDefaultInterfaceName();
-
     string getDefaultInterfaceAddr();
-
     bool isPortReserved(uint16_t port);
-
     string getRandomPort();
-
     static vector<uint16_t> dataConnectionPorts;
+    uint16_t dataConnectionPort;
+
+    //threads
+    enum ThreadType
+    {
+        Download,
+        Upload
+    };
+    bool uploadThreadActive = false;
+    bool downloadThreadActive = false;
+    pthread_t downloadThreadHandle;
+    pthread_t uploadThreadHandle;
+    string fileToUpload;
+    string fileToDownload;
+    int createThread(ThreadType threadType);
+    void *uploadThread(void *args);
+    void *downloadThread(void *args);
 };
 
 
