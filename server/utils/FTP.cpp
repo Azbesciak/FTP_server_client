@@ -102,6 +102,8 @@ void FTP::sendResponse(string message) {
 
 void FTP::putFile(string filename) {
     throw ServerException("500 Niezaimplementowana komenda.");
+
+    //send 226 reply after sending data
 }
 
 void FTP::getFile(string filename) {
@@ -112,7 +114,7 @@ void FTP::getFile(string filename) {
 //directory methods
 void FTP::removeDirectory(string name) {
     Directory::removeDirectory(name, currentDirectory);
-    sendResponse("200 OK");
+    sendResponse("250 OK");
 }
 /*
  * Tworzy folder/foldery.
@@ -123,7 +125,7 @@ void FTP::removeDirectory(string name) {
  */
 void FTP::makeDirectory(string name) {
     Directory::createDirectories(name, currentDirectory);
-    sendResponse("200 OK");
+    sendResponse("257 OK");
 }
 
 //file transfer methods
@@ -166,7 +168,7 @@ void FTP::listFiles(string dirName) {
  */
 void FTP::changeDirectory(string name) {
     currentDirectory = Directory::changeDirectory(name);
-    sendResponse("200 OK");
+    sendResponse("250 OK");
 }
 
 /*
@@ -216,7 +218,7 @@ string FTP::getDirectoryWithSpaces(vector<string> command) {
 }
 
 void FTP::sendPASSVResponse() {
-
+//227 Entering Passive Mode (h1,h2,h3,h4,p1,p2)
 }
 
 
