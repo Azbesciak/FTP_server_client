@@ -5,10 +5,10 @@ Based on [RFC 959 document](https://tools.ietf.org/html/rfc959).
 
 TO DO LIST:
 - implement
-  - [ ] ascii mode
-  - [ ] binary mode
-  - [ ] mkdir (MKD)
-  - [ ] rmdir (RMD)
+  - [x] ascii mode
+  - [x] binary mode
+  - [x] mkdir (MKD)
+  - [x] rmdir (RMD)
   - [ ] put (STOR)
   - [ ] get (RETR)
   

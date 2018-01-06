@@ -11,32 +11,29 @@ using namespace std;
 
 class FTP {
 public:
-    FTP(int socket);
-    typedef void (FTP::*CommandAction)(string arg);
-
-    void sendInitialMessage();
+    explicit FTP(int socket);
     void parseCommand(string command);
     void parseCommand(char * command);
     void sendResponse(string message);
-    char *buffer;
 private:
     vector<string> splitCommand(string command);
-    int socket;
+
     string toUpper(string data);
-    void userCommand(string name);
 
-    map<string, FTP::CommandAction>  create_stringToFunctionMap();
-    const map<string, FTP::CommandAction> stringToFunction ;
-
+    int socketDescriptor;
     //directory stuff
     void makeDirectory(string name);
     void removeDirectory(string name);
+    void printDirectory();
+    void changeDirectory(string name);
 
 
     //file transfer stuff
     void setTransferType(string type);
-    void uploadFile(string filename);
-    void downloadFile(string filename);
+
+    void putFile(string filename);
+
+    void getFile(string filename);
 
     void listFiles(string dirName);
 
@@ -46,6 +43,20 @@ private:
 
     int dataTransferPort;
     string currentDirectory;
+    string getDirectoryWithSpaces(vector<string> command);
+
+    //PASSV command
+    void sendPASSVResponse();
+
+    string getDefaultInterfaceName();
+
+    string getDefaultInterfaceAddr();
+
+    bool isPortReserved(uint16_t port);
+
+    string getRandomPort();
+
+    static vector<uint16_t> dataConnectionPorts;
 };
 
 

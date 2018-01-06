@@ -7,20 +7,25 @@
 
 #include <iostream>
 
-#define FILTER_NOT_ALLOWED_FILES 4
 using namespace std;
 
 class Directory {
 
 public:
     static string getRootDir();
-    static void createDirectories(string directory);
-    static void removeDirectory(string directory);
-    static void createDirectory(string directory);
-    static string listFiles(string directory);
+    static void createDirectories(string directory, string currentDirectory);
+    static void removeDirectory(string directory, string currentDirectory);
+    static string listFiles(string directory, string currentDirectory);
+    static string changeDirectory(string directory);
+
 private:
+    static void createDirectory(string directory);
     static bool isDirectoryExist(string dirname);
-    static void POSIXSlashes(string *windowsSlashes);
+    static void slashesConverter(string *windowsSlashes);
+    static unsigned int getSize(string fullname);
+    static unsigned int getSize(string directory, string file);
+    static void preparePath(string *path);
+    static string convertRelativeAbsolutePath(string *directory, string *currentDirectory);
 };
 
 

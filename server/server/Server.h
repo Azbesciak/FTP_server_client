@@ -2,6 +2,8 @@
 #include "Client.h"
 #include "FTP.h"
 #include "ServerException.h"
+#include "TerminalUtils.h"
+
 
 //system includes
 #include <stdio.h>
@@ -27,19 +29,6 @@
         RFC
         https://tools.ietf.org/html/rfc959
         http://www.cs.put.poznan.pl/mboron/prez/zasady_projektow.pdf
-
-        Methods to implement:
-                ascii
-                binary
-                mkdir
-                rmdir
-                put
-                get
-
-        Dopisać odbieranie i wysyłanie danych - binarnie i tekstowo.
-        Dekodowanie poleceń ( + obsługa nieznanych poleceń - do tego też odpowiednia odpowiedź dla klienta) i formułowanie odpowiedzi.
-
-
 */
 using namespace std;
 
