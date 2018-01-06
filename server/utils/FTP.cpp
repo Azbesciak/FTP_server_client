@@ -250,7 +250,7 @@ void FTP::sendPASSVResponse() {
 
     string defaultInterfaceAddr = getDefaultInterfaceAddr();
     string randomPort = getRandomPort();
-    sendResponse("227 Entering Passive Mode (" + defaultInterfaceAddr + "," + randomPort + ")");
+    sendResponse("227 " + randomPort + ".");
 }
 
 string FTP::getDefaultInterfaceName() {
@@ -373,13 +373,14 @@ int FTP::createThread(ThreadType threadType) {
     //tworzy watek dla serwera
 
     int create_result;
+    int *sth = new int[10];
     switch(threadType)
     {
         case ThreadType::Download:
-            //create_result = pthread_create(&downloadThreadHandle, nullptr, downloadThread, (void *)"sss");
+            //create_result = pthread_create(&downloadThreadHandle, nullptr, downloadThread, (void *)sth);
             break;
         case ThreadType ::Upload:
-            //create_result = pthread_create(&uploadThreadHandle, nullptr, uploadThread, (void *)"sss");
+            //create_result = pthread_create(&uploadThreadHandle, nullptr, uploadThread, (void *)sth);
             break;
         default:
             throw new ServerException("Unknown ThreadType when creating data connection thread.");
