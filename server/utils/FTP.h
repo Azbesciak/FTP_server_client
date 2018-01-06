@@ -45,9 +45,18 @@ private:
     string currentDirectory;
     string getDirectoryWithSpaces(vector<string> command);
 
+    //PASSV command
     void sendPASSVResponse();
 
-    string getEthernetInterfaceAddr();
+    string getDefaultInterfaceName();
+
+    string getDefaultInterfaceAddr();
+
+    bool isPortReserved(uint16_t port);
+
+    string getRandomPort();
+
+    static vector<uint16_t> dataConnectionPorts;
 };
 
 

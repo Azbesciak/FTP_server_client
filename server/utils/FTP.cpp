@@ -232,35 +232,13 @@ string FTP::getDirectoryWithSpaces(vector<string> command) {
 
 void FTP::sendPASSVResponse() {
 
-    int fd;
-    struct ifreq ifr;
-
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
-
-    // I want to get an IPv4 IP address
-    ifr.ifr_addr.sa_family = AF_INET;
-
-    string interfaceName = getEthernetInterfaceAddr();
-    // I want IP address attached to "eth0"
-    strncpy(ifr.ifr_name, "eth0", IFNAMSIZ - 1); //enp0s3
-
-    if (ioctl(fd, SIOCGIFADDR, &ifr) < 0) {
-        printf("error while finding interface\n");
-    }
-
-    close(fd);
-
-    // display result
-    printf("%s\n", inet_ntoa(((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr));
-
-
-    //another method
-
-    sendResponse("227 Entering Passive Mode (h1,h2,h3,h4,p1,p2)");
-//227 Entering Passive Mode (h1,h2,h3,h4,p1,p2)
+    string defaultInterfaceAddr = getDefaultInterfaceAddr();
+    string randomPort = getRandomPort();
+    sendResponse("227 Entering Passive Mode (" + defaultInterfaceAddr + "," + randomPort + ")");
 }
 
-string FTP::getEthernetInterfaceAddr() {
+string FTP::getDefaultInterfaceName() {
+    //TODO mutex
     system("ip route | awk '/default/ {printf $5}' >> eth");   //get default interface
     ifstream file("eth");
     string interfaceName;
@@ -269,10 +247,109 @@ string FTP::getEthernetInterfaceAddr() {
             file >> interfaceName;
         }
         file.close();
-        unlink("eth");   //TODO mutex on unlinking
+        unlink("eth");
     }
     return interfaceName;
 }
 
+string FTP::getDefaultInterfaceAddr() {
+    string interfaceName = getDefaultInterfaceName();
 
+    int fd;
+    struct ifreq ifr;
+
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    // I want to get an IPv4 IP address
+    ifr.ifr_addr.sa_family = AF_INET;
+
+    // I want IP address attached to "eth0"
+    if (interfaceName.empty()) {
+        interfaceName = "eth0";
+    }
+    strncpy(ifr.ifr_name, interfaceName.c_str(), IFNAMSIZ - 1); //enp0s3
+
+    if (ioctl(fd, SIOCGIFADDR, &ifr) < 0) {
+        interfaceName = "eth0";
+#if DEBUG
+        printf("error while finding interface\n");
+#endif
+    }
+    close(fd);
+
+    string addr(inet_ntoa(((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr));
+
+    size_t pos;
+    while ((pos = addr.find(".")) != string::npos) {
+        addr.replace(pos, 1, ",");
+    }
+#if false
+    printf("error while finding interface\n");
+#endif
+    return addr;
+}
+
+bool FTP::isPortReserved(uint16_t port) {
+    //check in list with ports
+    for (auto const &value: dataConnectionPorts) {
+        if (value == port) {
+            return true;
+        }
+    }
+
+    int sockfd;
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        return true;
+    }
+    struct sockaddr_in sockAddr;
+    memset(&sockAddr, 0, sizeof(sockAddr));
+    sockAddr.sin_family = AF_INET;
+    inet_pton(AF_INET, "127.0.0.1", &sockAddr.sin_addr);
+    sockAddr.sin_port = port;
+    sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    //bindowanie do socketu
+    int time = 1;
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *) &time, sizeof(time));
+    if (bind(sockfd, (struct sockaddr *) &sockAddr, sizeof(sockAddr)) < 0) {
+        return true;
+    }
+
+    close(sockfd);
+
+    return false;
+}
+
+string FTP::getRandomPort() {
+    //TODO mutex
+    uint16_t port;
+    uint16_t p1;
+    uint16_t p2;
+    srand(static_cast<unsigned int>(time(nullptr)));
+    do {
+        //port = p1 * 256 + p2
+        //p1 * 256  -> [1024, 32 768]
+        //p2        -> [0, 32 767]
+        p1 = ((rand() % 125) + 4); //p1 -> [4, 128]
+        p2 = ((rand() % (1 << 15)) - 1);
+        port = (p1 << 8) + p2;
+    } while (isPortReserved(port));
+
+    //add port to global ports
+    dataConnectionPorts.push_back(port);
+
+    string portStr;
+    auto *temp = new char[20];
+    sprintf(temp, "%d", p1);
+
+    portStr = temp;
+    portStr += ',';
+
+    memset(temp, 0, 20);
+    sprintf(temp, "%d", p2);
+    portStr += temp;
+
+    delete[]temp;
+    return portStr;
+}
 
