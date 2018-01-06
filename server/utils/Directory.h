@@ -23,7 +23,7 @@ public:
 private:
     static void createDirectory(string directory);
     static bool isDirectoryExist(string dirname);
-    static bool isDescriptorExist(string descriptor);
+    static bool isDescriptorExist(string descriptor, struct stat *st);
 
     static void slashesConverter(string *windowsSlashes);
     static unsigned int getSize(string fullname);
