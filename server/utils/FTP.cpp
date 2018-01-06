@@ -36,7 +36,7 @@ void FTP::parseCommand(char *command) {
 }
 
 void FTP::parseCommand(string command) {
-    if (command.size() > 30) {
+    if (command.size() > 280) {
         throw ServerException("500 Komenda za długa.");
     }
 
@@ -69,6 +69,7 @@ void FTP::parseCommand(string command) {
         if (splittedCommand.size() < 2) {
             listFiles(currentDirectory);
         } else {
+            //string directory = getDirectoryWithSpaces(splittedCommand);
             listFiles(splittedCommand[1]);
         }
     } else if (splittedCommand[0].find("PWD") != string::npos) {
@@ -80,6 +81,7 @@ void FTP::parseCommand(string command) {
             changeDirectory("/");   //brak parametru, przejdz do glownego
         } else
         {
+            //string directory
             changeDirectory(splittedCommand[1]);    //przejdz do wskazanego przez parametr
         }
     } else if (splittedCommand[0].find("PASSV") != string::npos) {
@@ -172,8 +174,9 @@ void FTP::setTransferType(string type) {
 }
 
 /*
- * Listuje pliki z podanego folderu.
- * dirName jest ścieżką względną. (Względem PWD).
+ * list /   -> listuje katalog głowny
+ * list     -> listuje aktualny katalog
+ * list dir -> listuje podkatalog dir
  */
 void FTP::listFiles(string dirName) {
     string list = Directory::listFiles(dirName, currentDirectory);

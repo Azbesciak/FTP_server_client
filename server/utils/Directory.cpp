@@ -80,7 +80,6 @@ void Directory::createDirectory(string directory) {
  * list /   -> listuje katalog głowny
  * list     -> listuje aktualny katalog
  * list dir -> listuje podkatalog dir
- * list /dir -> listuje podkatalog dir katalogu glownego
  */
 string Directory::listFiles(string directory, string currentDirectory) {
 
@@ -267,6 +266,7 @@ string Directory::getRootDir() {
     return serverHome;
 }
 
+//remove first slash and add at the end
 //removes unnecessary slashes to avoid troublels with root dir
 void Directory::preparePath(string *path)
 {
