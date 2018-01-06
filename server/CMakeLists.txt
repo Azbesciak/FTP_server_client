@@ -10,4 +10,4 @@ include_directories(utils)
 add_executable(server
         server/Server.cpp
         server/Server.h
-        Makefile utils/Client.cpp utils/Client.h utils/Directory.cpp utils/Directory.h utils/File/File.cpp utils/File/File.h utils/FTP.cpp utils/FTP.h utils/ServerException.h utils/TerminalUtils.h)
+        Makefile utils/Client.cpp utils/Client.h utils/Directory.cpp utils/Directory.h utils/File/File.cpp utils/File/File.h utils/FTP.cpp utils/FTP.h utils/ServerException.h utils/TerminalUtils.h server/ServerConfig.h)

@@ -19,13 +19,13 @@ public:
     static string changeDirectory(string directory, string currentDirectory);
 
     static bool isFileExist(string filename);
+    static void slashesConverter(string *windowsSlashes);
 
 private:
     static void createDirectory(string directory);
     static bool isDirectoryExist(string dirname);
     static bool isDescriptorExist(string descriptor, struct stat *st);
 
-    static void slashesConverter(string *windowsSlashes);
     static unsigned int getSize(string fullname);
     static unsigned int getSize(string directory, string file);
     static void preparePath(string *path);

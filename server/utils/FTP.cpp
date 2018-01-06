@@ -16,6 +16,7 @@
 
 //second method
 #include <fstream>
+#include "ServerConfig.h"
 
 //my includes
 #include "FTP.h"
@@ -29,11 +30,13 @@ vector<uint16_t> FTP::dataConnectionPorts;
 FTP::FTP() {
     throw new ServerException("Use FTP(int socket) instead.");
 }
+
 FTP::FTP(int socket) : socketDescriptor(socket) {
     currentDirectory = "/";
     dataConnectionPort = 0;
     dataConnectionOpened = false;
 }
+
 string FTP::toUpper(string data) {
     std::transform(data.begin(), data.end(), data.begin(), ::toupper);
     return data;
@@ -85,11 +88,9 @@ void FTP::parseCommand(string command) {
         //wypisz zawartrosc zmiennej currentDirectory
         printDirectory();
     } else if (splittedCommand[0].find("CWD") != string::npos) {
-        if(splittedCommand.size() < 2)
-        {
+        if (splittedCommand.size() < 2) {
             changeDirectory("/");   //brak parametru, przejdz do glownego
-        } else
-        {
+        } else {
             string directory = getDirectoryWithSpaces(splittedCommand);
             changeDirectory(directory);    //przejdz do wskazanego przez parametr
         }
@@ -121,20 +122,27 @@ void FTP::sendResponse(string message) {
 
 
 void FTP::putFile(string filename) {
-    if(!uploadThreadActive) {
-        createThread(ThreadType::Upload);
+    if (dataConnectionPort == 0) {
+        throw ServerException("500 Send PASSV.");
+    }
+    throw ServerException("500 Niezaimplementowana komenda.");
+
+}
+
+void FTP::getFile(string filename) {
+    if (dataConnectionPort == 0) {
+        throw ServerException("500 Send PASSV.");
+    }
+    if (!downloadThreadActive) {
+        createThread(ThreadType::Download);
     }
 
     //TODO mutex
 
-    fileToUpload = filename;
+    fileToDownload = filename;
+
 
     //send 226 reply after sending data
-}
-
-void FTP::getFile(string filename) {
-    throw ServerException("500 Niezaimplementowana komenda.");
-
 }
 
 //directory methods
@@ -142,6 +150,7 @@ void FTP::removeDirectory(string name) {
     Directory::removeDirectory(name, currentDirectory);
     sendResponse("250 OK");
 }
+
 /*
  * Tworzy folder/foldery.
  * Składnia nazwaFolderu/[nazwa kolejnego folderu]/
@@ -234,7 +243,7 @@ string FTP::getDirectoryWithSpaces(vector<string> command) {
         //check if there is another string to add
         if (command.size() - 1 >= (iter + 1)) {
             directory += char(32);  //add space
-            directory += command[iter+1];
+            directory += command[iter + 1];
         } else {
             break;
         }
@@ -246,10 +255,32 @@ string FTP::getDirectoryWithSpaces(vector<string> command) {
     return directory;
 }
 
+/*
+ * Jeżeli jest wysyłany drugi passv to staramy sie zamknac poprzedni port,
+ * jeżeli jest to niemozliwe, rzucamy wyjatek.
+ *
+ */
 void FTP::sendPASSVResponse() {
+    //TODO mutex for socketDescriptor and activity flags
+    //TODO wyslac jakies gowno jezeli jest passv kiedy juz byl ustawiony
+    if (uploadThreadActive || downloadThreadActive) {
+        throw ServerException("500 0,0 Zmiana portu niemożliwa, port aktualnie w użyciu.");
+    } else {
+        if (dataConnectionSocket != 0) {
+            dataConnectionOpened = false;
+            close(dataConnectionSocket);
+        }
+        //zabij watki, mozliwe, ze moga dalej sie starac otwierac poprzedni socket
+        killDataConnectionThreads();
+    }
 
     string defaultInterfaceAddr = getDefaultInterfaceAddr();
     string randomPort = getRandomPort();
+
+    //kiedy port ustawiony otworz polaczenie, aby zagwarantowac, ze zaden inny program
+    //nie odbierze nam portu
+    setUpSocketForDataConnection();
+
     sendResponse("227 " + randomPort + ".");
 }
 
@@ -281,12 +312,12 @@ string FTP::getDefaultInterfaceAddr() {
 
     // I want IP address attached to "eth0"
     if (interfaceName.empty()) {
-        interfaceName = "eth0";
+        interfaceName = DEFAULT_INTERFACE;
     }
     strncpy(ifr.ifr_name, interfaceName.c_str(), IFNAMSIZ - 1); //enp0s3
 
     if (ioctl(fd, SIOCGIFADDR, &ifr) < 0) {
-        interfaceName = "eth0";
+        interfaceName = DEFAULT_INTERFACE;
 #if DEBUG
         printf("error while finding interface\n");
 #endif
@@ -320,7 +351,7 @@ bool FTP::isPortReserved(uint16_t port) {
     struct sockaddr_in sockAddr;
     memset(&sockAddr, 0, sizeof(sockAddr));
     sockAddr.sin_family = AF_INET;
-    inet_pton(AF_INET, "127.0.0.1", &sockAddr.sin_addr);
+    inet_pton(AF_INET, DEFAULT_ADDR, &sockAddr.sin_addr);
     sockAddr.sin_port = port;
     sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
@@ -353,6 +384,9 @@ string FTP::getRandomPort() {
 
     //add port to global ports
     FTP::dataConnectionPorts.push_back(port);
+    //set port in this instance
+    dataConnectionPort = port;
+
 
     string portStr;
     auto *temp = new char[20];
@@ -373,14 +407,12 @@ int FTP::createThread(ThreadType threadType) {
     //tworzy watek dla serwera
 
     int create_result;
-    int *sth = new int[10];
-    switch(threadType)
-    {
+    switch (threadType) {
         case ThreadType::Download:
-            //create_result = pthread_create(&downloadThreadHandle, nullptr, downloadThread, (void *)sth);
+            create_result = pthread_create(&downloadThreadHandle, nullptr, newDownloadThreadWrapper, this);
             break;
-        case ThreadType ::Upload:
-            //create_result = pthread_create(&uploadThreadHandle, nullptr, uploadThread, (void *)sth);
+        case ThreadType::Upload:
+            create_result = pthread_create(&uploadThreadHandle, nullptr, newUploadThreadWrapper, this);
             break;
         default:
             throw new ServerException("Unknown ThreadType when creating data connection thread.");
@@ -397,67 +429,225 @@ int FTP::createThread(ThreadType threadType) {
     return create_result;
 }
 
+//TODO mutexex
+/*
+ * Mutex:
+ *      initialization -> when connection is not open
+ *      before file creation and when opening file
+ */
 void *FTP::uploadThread(void *args) {
 
     uploadThreadActive = true; //TODO mutex
-
-    struct sockaddr_in sockAddr;
-/*
-    int socketNum = socket(AF_INET, SOCK_STREAM, 0);
-    if (socketNum < 0) {
-        printf("Socket error\n");
-        exit(-1);
-    }
-    //socket tylko uzywamy do czasu accept
-
-    memset(&sockAddr, 0, sizeof(sockAddr));
-    sockAddr.sin_family = AF_INET;
-    inet_pton(AF_INET, options->addr, &sockAddr.sin_addr);
-    sockAddr.sin_port = htons(static_cast<uint16_t>(options->port));
-    sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-    //bindowanie do socketu
-    int time = 1;
-    setsockopt(socketNum, SOL_SOCKET, SO_REUSEADDR, (char *) &time, sizeof(time));
-    if (bind(socketNum, (struct sockaddr *) &sockAddr, sizeof(sockAddr)) < 0) {
-        perror("Binding error");
-        exit(-1);
+    //TODO mutex on binding
+    if (!dataConnectionOpened) {
+        setUpSocketForDataConnection();
     }
 
+    //wait for connection from client
+    cout << "Oczekiwanie na połączenie na porcie " << dataConnectionPort << endl;
+    socklen_t sockSize = sizeof(struct sockaddr);
+    int connection_descriptor = accept(socketDescriptor, (struct sockaddr *) &remote, &sockSize);
+    if (connection_descriptor < 0) {
+        perror("Client accepting error");
+        dataConnectionOpened = 0;
 
-    if (listen(socketNum, QUEUE_SIZE) < 0) {
-        perror("Listen error");
-        exit(-1);
     }
-    pthread_cleanup_push(cleanRoutine, (void *) 1);
-        socklen_t sockSize = sizeof(struct sockaddr);
-        while (runserver > 0) {
-            int connection_descriptor = accept(socketNum, (struct sockaddr *) &remote, &sockSize);
-            if (connection_descriptor < 0) {
-                perror("Client accepting error");
-                runserver = 0;
-                continue;
-            }
 
-            char remoteAddr[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
-            //pass structure with client's data port
-            printf("Podłączono klienta z adresem %s. Przypisany deskryptor %d\n", remoteAddr, connection_descriptor);
-            handleConnection(connection_descriptor, &remote);
+    //zapisnie adresu
+    char remoteAddr[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
+#if DEBUG
+    cout << "Upload thread: Podłączono klienta z adresem" << remoteAddr << "Przypisany deskryptor"
+         << connection_descriptor << endl;
+#endif
+
+    fstream file;
+    if (transferType == 'A') {
+        file.open(fileToUpload, ios::out);
+    } else {
+        file.open(fileToUpload, ios::out | ios::binary);
+    }
+#if DEBUG
+    cout << "Upload thread: Przygotowywanie pliku do wyslania " << fileToUpload << endl;
+#endif
+    bool connectionOpened = true;
+
+    //buffer for data
+    auto *buffer = new char[BUFFER_SIZE];
+
+    while (connectionOpened) {
+        //while there are not sent bits...
+        connectionOpened = false;
+        cout << "Data sent" << endl;
+    }
+
+    file.close();
+
+    //TODO mutex on socket descriptor
+    if (!downloadThreadActive) {
+        //close socket only when data is not being downloaded
+        if (dataConnectionSocket != 0) {
+            close(dataConnectionSocket);
+            dataConnectionOpened = false;
         }
-    pthread_cleanup_pop(true);
-    close(socketNum);
-*/
+    }
+
     uploadThreadActive = false;
 }
 
 void *FTP::downloadThread(void *args) {
 
     downloadThreadActive = true; //TODO mutex
+    if (!dataConnectionOpened) {
+        setUpSocketForDataConnection();
+    }
 
+    //wait for connection from client
+    cout << "Oczekiwanie na połączenie na porcie " << dataConnectionPort << endl;
+    socklen_t sockSize = sizeof(struct sockaddr);
+    int connection_descriptor = accept(dataConnectionSocket, (struct sockaddr *) &remote, &sockSize);
+    if (connection_descriptor < 0) {
+#if DEBUG
+        cout << "Download thread, client " << socketDescriptor << " accepting error.\n";
+#endif
+        perror("Download thread.Client accepting error");
+        dataConnectionOpened = 0;
+    }
 
+    //zapisnie adresu
+    char remoteAddr[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
+#if DEBUG
+    cout << "Download thread: Podłączono klienta z adresem" << remoteAddr << "Przypisany deskryptor"
+         << connection_descriptor << endl;
+#endif
+
+    //add current directory
+    prepareFileToDownload();
+
+    fstream file;
+    if (transferType == 'A') {
+        file.open(fileToDownload, ios::out);
+    } else {
+        file.open(fileToDownload, ios::out | ios::binary);
+    }
+#if DEBUG
+    cout << "Download thread: Tworzenie pliku " << fileToUpload << endl;
+#endif
+    bool connectionOpened = true;
+
+    //buffer for data
+    auto *buffer = new char[BUFFER_SIZE];
+
+    while (connectionOpened) {
+        ssize_t value = read(dataConnectionSocket, buffer, BUFFER_SIZE);
+        //check for EOT end of tranmission
+        if (value == EOF) {
+            connectionOpened = false;
+            continue;
+        }
+        if (buffer[value - 1] == EOF) {
+            file.write(buffer, value - 1);
+            connectionOpened = false;
+            continue;
+        }
+        file.write(buffer, value);
+    }
+
+    file.close();
+
+    //TODO mutex on socket descriptor
+    if (!uploadThreadActive) {
+        //close socket only when data is not being downloaded
+        if (dataConnectionSocket != 0) {
+            close(dataConnectionSocket);
+            dataConnectionOpened = false;
+        }
+    }
 
     downloadThreadActive = false;
 }
 
+void *FTP::newUploadThreadWrapper(void *object) {
+    reinterpret_cast<FTP *>(object)->uploadThread(nullptr);
+    return 0;
+}
+
+void *FTP::newDownloadThreadWrapper(void *object) {
+    reinterpret_cast<FTP *>(object)->downloadThread(nullptr);
+    return 0;
+}
+
+/*
+ * Removes slash at the beginning.
+ * Adds current directory position.
+ */
+void FTP::prepareFileToDownload() {
+    //TODO mutex on fileToUpload
+    Directory::slashesConverter(&fileToDownload);
+    //remove slash at 0 position
+    if (fileToDownload[0] == '/') {
+        fileToDownload.erase(fileToDownload.size() - 1, 1);
+    }
+
+    //add current directory
+    fileToDownload = currentDirectory + fileToDownload;
+}
+
+//initiate socket for dataconnection
+void FTP::setUpSocketForDataConnection() {
+    //open new socket for the connection
+    struct sockaddr_in sockAddr;
+
+    dataConnectionSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (dataConnectionSocket < 0) {
+        printf("Client data connection socket. Socket error\n");
+        throw ServerException("500 Internal server exception. Socket.");
+    }
+    memset(&sockAddr, 0, sizeof(sockAddr));
+    sockAddr.sin_family = AF_INET;
+    inet_pton(AF_INET, DEFAULT_ADDR, &sockAddr.sin_addr);
+    sockAddr.sin_port = dataConnectionPort;
+    cout << "Data conn port " << dataConnectionPort << endl;
+    sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    //bindowanie do socketu
+    int time = 1;
+    setsockopt(dataConnectionSocket, SOL_SOCKET, SO_REUSEADDR, (char *) &time, sizeof(time));
+    if (bind(dataConnectionSocket, (struct sockaddr *) &sockAddr, sizeof(sockAddr)) < 0) {
+        perror("Client data connection socket. Binding error");
+        throw ServerException("500 Internal server exception. Bind.");
+    }
+
+    if (listen(dataConnectionSocket, QUEUE_SIZE) < 0) {
+        perror("Client data connection socket. Listen error");
+        throw ServerException("500 Internal server exception. Listen.");
+    }
+#if DEBUG
+    cout << "Client " << socketDescriptor << " socket for data connection initialized. Port " << dataConnectionPort << " binded.\n";
+#endif
+    dataConnectionOpened = true;
+}
+
+void FTP::killDataConnectionThreads() {
+#if DEBUG
+    cout << "Killing client's threads. Client descriptor " << socketDescriptor << endl;
+#endif
+
+    if (uploadThreadHandle != 0) {
+#if DEBUG
+        cout << "Client " << socketDescriptor << " upload thread killed"<< endl;
+#endif
+        pthread_cancel(uploadThreadHandle);
+    }
+
+    if (uploadThreadHandle != 0) {
+#if DEBUG
+        cout << "Client " << socketDescriptor << " download thread killed"<< endl;
+#endif
+        pthread_cancel(downloadThreadActive);
+    }
+
+
+}
 

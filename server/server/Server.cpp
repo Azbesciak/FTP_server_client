@@ -1,4 +1,6 @@
 #include "Server.h"
+#include "ServerConfig.h"
+
 /*
 	RFC
 	https://tools.ietf.org/html/rfc959
@@ -167,6 +169,7 @@ void *connection(void *t_data) {
             }
         } else if (buffer[0] == 0) {
             cout << RED_TEXT("Klient z adresu " << remoteAddr << ", o deskryptorze " << th_data->socketDescriptor << " się rozłączył!\n");
+            ftpClient->killDataConnectionThreads();
             keepConnection = 0;
             continue;
         } else {
