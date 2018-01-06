@@ -122,7 +122,7 @@ public class MainScene {
                             activeNode = (TreeItemExtended) expanded.getParent();
                             System.out.println(activeNode);
                             listServerFiles(expanded);
-                            activeNode=expanded;
+                          //  activeNode=expanded;
 
 
 

@@ -211,6 +211,9 @@ public class Connection implements  Runnable {
         }
         else
         {
+            command = "STOR " + getFileName(f);
+            writer.println(command);
+            message = reader.readLine();
             DataOutputStream dos = new DataOutputStream(client.getOutputStream());
             FileInputStream fis = new FileInputStream(f.getValue());
             byte[] buffer = new byte[4096];
