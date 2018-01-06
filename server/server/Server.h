@@ -2,6 +2,8 @@
 #include "Client.h"
 #include "FTP.h"
 #include "ServerException.h"
+#include "TerminalUtils.h"
+
 
 //system includes
 #include <stdio.h>

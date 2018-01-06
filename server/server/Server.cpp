@@ -1,4 +1,3 @@
-#include <utils/TerminalUtils.h>
 #include "Server.h"
 /*
 	RFC
