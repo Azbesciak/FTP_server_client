@@ -17,9 +17,10 @@ public:
     void sendResponse(string message);
 private:
     vector<string> splitCommand(string command);
-    int socket;
+
     string toUpper(string data);
 
+    int socketDescriptor;
     //directory stuff
     void makeDirectory(string name);
     void removeDirectory(string name);
@@ -45,6 +46,8 @@ private:
     string getDirectoryWithSpaces(vector<string> command);
 
     void sendPASSVResponse();
+
+    string getEthernetInterfaceAddr();
 };
 
 

@@ -21,7 +21,7 @@
 #define BUFFER_SIZE 1000
 #define QUEUE_SIZE 5
 
-#define DEFAULT_PORT 10001
+#define DEFAULT_PORT 21
 #define DEFAULT_ADDR "127.0.0.1"
 /*
         RFC

@@ -80,6 +80,7 @@ void Directory::createDirectory(string directory) {
  * list /   -> listuje katalog głowny
  * list     -> listuje aktualny katalog
  * list dir -> listuje podkatalog dir
+ * list /dir -> listuje podkatalog dir katalogu glownego
  */
 string Directory::listFiles(string directory, string currentDirectory) {
 
@@ -128,8 +129,7 @@ string Directory::listFiles(string directory, string currentDirectory) {
         auto *size = new char[10];
         while ((ent = readdir(dir)) != nullptr) {
             //nie wypisuj folderów specjalnych
-            if(strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
-            {
+            if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
                 continue;
             }
 
@@ -167,8 +167,7 @@ string Directory::changeDirectory(string directory) {
     slashesConverter(&directory);
     preparePath(&directory);
 
-    if(directory == "/")
-    {
+    if (directory == "/") {
         return directory;
     }
 
@@ -179,8 +178,7 @@ string Directory::changeDirectory(string directory) {
     cout << "Trying to change dir to " << fullPath << endl;
 #endif
 
-    if(!isDirectoryExist(fullPath))
-    {
+    if (!isDirectoryExist(fullPath)) {
         throw ServerException("550 Folder nie istnieje.");
     }
     return directory;
@@ -190,13 +188,11 @@ string Directory::changeDirectory(string directory) {
 unsigned int Directory::getSize(string directory, string file)
 {
     //dodaj slash na koniec nazwy folderu
-    if(directory[directory.size() - 1] != '/')
-    {
+    if (directory[directory.size() - 1] != '/') {
         directory += '/';
     }
     //usun slash na poczatku nazwy pliku
-    if(file[0] == '/')
-    {
+    if (file[0] == '/') {
         file.erase(0, 1);
     }
     return getSize(directory + file);
@@ -205,8 +201,7 @@ unsigned int Directory::getSize(string directory, string file)
 unsigned int Directory::getSize(string fullname)
 {
     struct stat st = {0};
-    if(stat(fullname.c_str(), &st) != -1)
-    {
+    if (stat(fullname.c_str(), &st) != -1) {
         return (unsigned int)st.st_size;
     }else{
         throw ServerException("550 Plik nie istnieje.");
@@ -227,8 +222,9 @@ bool Directory::isDirectoryExist(string dirname) {
 //converts backslashes to UNIX slashes
 void Directory::slashesConverter(string *windowsSlashes) {
     size_t pos = 0;
-    if(windowsSlashes->empty())
+    if (windowsSlashes->empty()) {
         return;
+    }
     while ((pos = windowsSlashes->find("\\")) != string::npos) {
         windowsSlashes->replace((int)pos, 1, "/");
     }
@@ -258,12 +254,10 @@ string Directory::getRootDir() {
 //removes unnecessary slashes to avoid troublels with root dir
 void Directory::preparePath(string *path)
 {
-    if((*path)[0] == '/')
-    {
+    if ((*path)[0] == '/') {
         path->erase(0,1);   //remove first slash if exists
     }
-    if((*path)[path->size() - 1] != '/')
-    {
+    if ((*path)[path->size() - 1] != '/') {
         (*path) += '/'; //add slash at the end if doesn't exist
     }
 }
@@ -274,11 +268,9 @@ string Directory::convertRelativeAbsolutePath(string *directory, string *current
     if ((*directory)[0] == '/') {
         //sciezka bezwzgledna lub katalog główny
         directory->erase(0, 1);
-    }else
-    {
+    } else {
         //sciezka wzgledna
-        if((*currentDirectory) != "/")
-        {
+        if ((*currentDirectory) != "/") {
             //dodaj pwd jezeli nie jest on /,
             // bo podfoldery nie zawieraja / na poczatku
             newPath += *currentDirectory;

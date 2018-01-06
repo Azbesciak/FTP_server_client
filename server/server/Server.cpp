@@ -1,5 +1,5 @@
+#include <utils/TerminalUtils.h>
 #include "Server.h"
-#include "TerminalUtils.h"
 /*
 	RFC
 	https://tools.ietf.org/html/rfc959
@@ -33,9 +33,7 @@ int main(int argc, char *argv[]) {
            && command != "quit") {
         cin >> command;
         parseCommand(command);
-
     }
-
     pthread_cancel(static_cast<pthread_t>(serverThread));
     return 0;
 }
@@ -142,7 +140,6 @@ void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remo
         exit(-1);
     }
 }
-
 //funkcja opisującą zachowanie wątku - musi przyjmować argument typu (void *) i zwracać (void *)
 void *connection(void *t_data) {
     pthread_detach(pthread_self());
@@ -151,13 +148,13 @@ void *connection(void *t_data) {
     char remoteAddr[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(th_data->remote->sin_addr), remoteAddr, INET_ADDRSTRLEN);
 
-    cout << "Inicjalizacja się powiodła. Deskryptor " << GREEN_TEXT(th_data->socketDescriptor) <<", trafił z adresu "<< GREEN_TEXT(remoteAddr) <<".\n";
+    cout << "Inicjalizacja się powiodła. Deskryptor " << GREEN_TEXT(th_data->socketDescriptor) << ", trafił z adresu " << GREEN_TEXT(remoteAddr) << ".\n";
 
     auto *buffer = new char[BUFFER_SIZE];
     int keepConnection = 1;
     auto *ftpClient = new FTP(th_data->socketDescriptor);
 
-    //main loop
+    //main client's loop
     while (keepConnection > 0) {
         ssize_t value = read(th_data->socketDescriptor, buffer, BUFFER_SIZE);
         if (value > 0) {
@@ -170,7 +167,7 @@ void *connection(void *t_data) {
                 ftpClient->sendResponse("500 Nieznany problem.");
             }
         } else if (buffer[0] == 0) {
-            cout << RED_TEXT("Klient z adresu "<< remoteAddr << ", o deskryptorze "<< th_data->socketDescriptor <<" się rozłączył!\n");
+            cout << RED_TEXT("Klient z adresu " << remoteAddr << ", o deskryptorze " << th_data->socketDescriptor << " się rozłączył!\n");
             keepConnection = 0;
             continue;
         } else {
@@ -179,7 +176,7 @@ void *connection(void *t_data) {
         //czyszczenie bufora, aby uniknac pomieszania z poprzednimi komendami
         memset(buffer, 0, BUFFER_SIZE);
     }
-
+    delete ftpClient;
     delete (struct thread_data_t *) t_data;
     pthread_exit(NULL);
 }
@@ -191,20 +188,17 @@ void parseCommand(string command) {
         runserver = 0;
         sleep(1);
         runserver = 1;
-    }else if(command.find("stop") != string::npos)
-    {
+    } else if (command.find("stop") != string::npos) {
         cout << GREEN_TEXT("Zatrzymywanie serwera.\n");
         runserver = 0;
-    }
-    else
-    {
+    } else {
         cout << RED_TEXT("Brak zdefiniowanej funkcji dla ") << WHITE_TEXT(command) << "\n";
     }
 }
 
 
 void displayRequest(int socketDescriptor, char *request) {
-    cout << YELLOW_TEXT("Klient " <<  socketDescriptor) << "\n";
+    cout << YELLOW_TEXT("Klient " << socketDescriptor) << "\n";
     cout << "\t" << MAGENTA_TEXT("Zapytanie od " << socketDescriptor << ":\t") << GREEN_TEXT(request);
 }
 

@@ -1,9 +1,9 @@
 CC = $(CXX)
 OUT_DIR = bin
 INC_DIR = -Iutils
-CFLAGS = -Weverything -pthread $(INC_DIR) -std=c++11
-CPP = server/server.cpp utils/*.cpp
+CPPFLAGS = -Wall -Weffc++  -pthread $(INC_DIR) -std=c++11
+CPP = server/Server.cpp utils/*.cpp
 all:	Server
-Server:		server/server.cpp
-		$(CC) $(CFLAGS) $(CPP) -o $(OUT_DIR)/ftp_server
+Server:		server/Server.cpp
+		$(CC) $(CPPFLAGS) $(CPP) -o $(OUT_DIR)/ftp_server
 clean: 		rm ftp_server.o

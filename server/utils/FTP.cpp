@@ -8,6 +8,17 @@
 #include <iterator>
 #include <sstream>
 
+#include <arpa/inet.h>
+
+//first method to display interface addr
+#include <string.h>
+#include <sys/ioctl.h>
+#include <net/if.h> //IFNAMSIZ
+
+//second method
+#include <fstream>
+
+
 #include "FTP.h"
 #include "Directory.h"
 #include "ServerException.h"
@@ -89,14 +100,14 @@ void FTP::parseCommand(string command) {
     }
 }
 
-FTP::FTP(int socket) : socket(socket) {
+FTP::FTP(int socket) : socketDescriptor(socket) {
     currentDirectory = "/";
 }
 
 void FTP::sendResponse(string message) {
     message += "\r\n";
     cout << "\t" << MAGENTA_TEXT("odpowiedź do " << socket << ":\t") << GREEN_TEXT(message);
-    write(socket, message.c_str(), message.size());
+    write(socketDescriptor, message.c_str(), message.size());
 }
 
 
@@ -168,7 +179,9 @@ void FTP::listFiles(string dirName) {
  */
 void FTP::changeDirectory(string name) {
     currentDirectory = Directory::changeDirectory(name);
-    sendResponse("250 OK");
+    string reply = "250 ";
+    reply += currentDirectory;
+    sendResponse(reply);
 }
 
 /*
@@ -218,7 +231,47 @@ string FTP::getDirectoryWithSpaces(vector<string> command) {
 }
 
 void FTP::sendPASSVResponse() {
+
+    int fd;
+    struct ifreq ifr;
+
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    // I want to get an IPv4 IP address
+    ifr.ifr_addr.sa_family = AF_INET;
+
+    string interfaceName = getEthernetInterfaceAddr();
+    // I want IP address attached to "eth0"
+    strncpy(ifr.ifr_name, "eth0", IFNAMSIZ - 1); //enp0s3
+
+    if (ioctl(fd, SIOCGIFADDR, &ifr) < 0) {
+        printf("error while finding interface\n");
+    }
+
+    close(fd);
+
+    // display result
+    printf("%s\n", inet_ntoa(((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr));
+
+
+    //another method
+
+    sendResponse("227 Entering Passive Mode (h1,h2,h3,h4,p1,p2)");
 //227 Entering Passive Mode (h1,h2,h3,h4,p1,p2)
+}
+
+string FTP::getEthernetInterfaceAddr() {
+    system("ip route | awk '/default/ {printf $5}' >> eth");   //get default interface
+    ifstream file("eth");
+    string interfaceName;
+    if (file.is_open()) {
+        if (!file.eof()) {
+            file >> interfaceName;
+        }
+        file.close();
+        unlink("eth");   //TODO mutex on unlinking
+    }
+    return interfaceName;
 }
 
 
