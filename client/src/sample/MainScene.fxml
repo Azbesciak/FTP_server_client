@@ -26,7 +26,7 @@
                <Label layoutX="321.0" layoutY="35.0" text="Port" />
          
                <Button fx:id="connect" layoutX="524.0" layoutY="20.0" mnemonicParsing="false" onMouseClicked="#connectWithServer" prefHeight="47.0" prefWidth="146.0" text="Połącz z serwerem" />
-               <TextField fx:id="serverAddress" layoutX="183.0" layoutY="28.0" prefHeight="32.0" prefWidth="130.0" promptText="adres serwera" text="127.0.0.1" />
+               <TextField fx:id="serverAddress" layoutX="183.0" layoutY="28.0" prefHeight="32.0" prefWidth="130.0" promptText="adres serwera" text="127.0.1.1" />
                <TextField fx:id="portNumber" layoutX="349.0" layoutY="31.0" promptText="numer portu" text="10001" />
                <Button fx:id="addLocalFolder" layoutX="14.0" layoutY="138.0" mnemonicParsing="false" prefHeight="55.0" prefWidth="126.0" text="Dodaj folder" />
                <Button fx:id="deleteLocalFolder" layoutX="166.0" layoutY="138.0" mnemonicParsing="false" prefHeight="55.0" prefWidth="114.0" text="Usuń folder" />

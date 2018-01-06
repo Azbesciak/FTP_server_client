@@ -20,11 +20,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 
 public class MainScene {
     public TextField serverAddress;
     public TextField portNumber;
+    public TreeItemExtended activeNode;
     @FXML
     public TreeView files;
     public TextField RemotePath;
@@ -47,25 +49,18 @@ public class MainScene {
 
     private void initialize()
     {
-       // files.setEditable(true);
-       // files.setCellFactory(TextFieldTreeCell.forTreeView());
         files.setRoot(getRootDir());
-        String files2 = "Phome/32"+(char)3+"Pcache/15"+(char)3+"Ffolder/16"+(char)3+"Pplik/10"+(char)3;
-        serverFiles.setRoot(initServerFiles(files2));
-        Connection connection;
         files.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
                 if(event.getClickCount() == 2)
                 {
                     ObservableList<TreeItem<File>> file = files.getSelectionModel().getSelectedItems();
-
                     System.out.println(file.get(0).getValue());
                 }
             }
         });
         listFiles();
-
         getDirectory();
     }
 
@@ -75,35 +70,131 @@ public class MainScene {
 
     }
 
-    public String inverse(String text)
-    {
-        String capitalizedText="";
-        boolean capitalize=false;
-        for(int i=0;i<text.length();i++)
-        {
-            if(capitalize==true)
-            {
-                capitalizedText+=Character.toUpperCase(text.charAt(i));
-                capitalize=false;
-            }
-            else
-            {
-                capitalizedText+=text.charAt(i);
-            }
-            if(text.charAt(i)==' ') capitalize=true;
-        }
-        capitalizedText=StringUtils.capitalize(capitalizedText);
-        return capitalizedText;
-    }
 
     @FXML
-    private void connectWithServer() {
+    private void connectWithServer() throws InterruptedException {
 
-        connection = new Connection();
+        connection = new Connection(serverAddress.getText(),portNumber.getText());
+        connection.command="CONNECT";
         Thread thread = new Thread(connection);
         thread.start();
+        thread.join();
+        connection.command="LIST";
+        connection.argument="";
+        thread = new Thread(connection);
+        thread.start();
+        thread.join();
+        serverFiles.setRoot(initServerFiles(connection.message));
+        activeNode= (TreeItemExtended) serverFiles.getRoot();
+        serverFiles.getRoot().addEventHandler(TreeItemExtended.branchExpandedEvent(), new EventHandler() {
+
+            public void handle(Event e) {
+                try
+                {
+                TreeItemExtended<String> expanded= (TreeItemExtended<String>) e.getSource();
+                if(!expanded.isLeaf()) {
+
+                    if ((expanded!=serverFiles.getRoot()) && (expanded.getParent() == activeNode)) {
+                        expanded.getChildren().removeAll();
+                            listServerFiles(expanded);
+                            connection.command = "CWD";
+                            connection.argument ="/"+  getDir(expanded) + expanded.getValue();
+                        System.out.println("TERAZ: "+connection.argument);
+                        Thread thread = new Thread(connection);
+                        thread.start();
+
+                        thread.join();
+                            activeNode=expanded;
+                            RemotePath.setText(connection.argument+"/");
+
+
+                    }
+
+
+                    else if (expanded != serverFiles.getRoot()) {
+                        connection.command = "CWD";
+
+                        connection.argument = "/" + getDir(expanded);
+                        System.out.println("Sciezka: " + connection.argument);
+                        RemotePath.setText(connection.argument+expanded.getValue()+"/");
+                        Thread thread = new Thread(connection);
+                        thread.start();
+
+                            thread.join();
+                            activeNode = (TreeItemExtended) expanded.getParent();
+                            System.out.println(activeNode);
+                            listServerFiles(expanded);
+
+
+
+                    } else if (expanded == serverFiles.getRoot()) {
+                        connection.command = "CWD";
+                        connection.argument = "/";
+                        Thread thread = new Thread(connection);
+                        thread.start();
+                            thread.join();
+                            activeNode = (TreeItemExtended) serverFiles.getRoot();
+                            System.out.println(activeNode);
+                            listServerFiles(expanded);
+                            RemotePath.setText("/");
+
+
+                    }
+                }
+
+                    System.out.println(expanded.getValue());
+
+                }
+                catch (InterruptedException e2)
+                {
+                    e2.printStackTrace();
+                }
+
+            }
+        });
     }
 
+
+    private TreeItemExtended<String> initServerFiles(String input)
+    {
+       // String input = connection.LIST("/");
+        TreeItemExtended<String>root = new TreeItemExtended<>("F /0");
+        root.getChildren().clear();
+
+
+        String k ="";
+        k+=(char)3;
+        String[] files = input.split(k);
+
+        for (String file : files)
+        {
+            TreeItemExtended<String> treeNode = new TreeItemExtended<>(file);
+            root.getChildren().add(treeNode);
+        }
+        return root;
+    }
+
+    public void listServerFiles(TreeItemExtended parent) throws InterruptedException {
+        connection.command="LIST";
+        connection.argument=parent.getValue().toString()+"/";
+        Thread thread = new Thread(connection);
+        thread.start();
+        thread.join();
+        String k ="";
+        k+=(char)3;
+        String[] files = connection.message.split(k);
+        parent.getChildren().removeAll();
+        parent.getChildren().clear();
+        for (String file : files)
+        {
+            TreeItemExtended<String> treeNode = new TreeItemExtended<>(file);
+            parent.getChildren().add(treeNode);
+            serverFiles.refresh();
+
+        }
+
+
+    }
 
     public final String rootDir = "ftp_client_root_dir\\";
 
@@ -147,45 +238,13 @@ public class MainScene {
                     File[] listOfFiles = f.getValue().listFiles();
                     if (listOfFiles != null) {
                         for (File file : listOfFiles) {
-                            //   if (file.isFile()) {
-                          //  TreeItem<File>fil = new TreeItem<File>(file);
-                          //  fil.valueProperty().;
                             f.getChildren().add(new TreeItem<File>(file));
-                            //  }
                         }
                     }
                 }
             }
         });
-    }
 
-    private TreeItemExtended<String> initServerFiles(String input)
-    {
-        TreeItemExtended<String>root = new TreeItemExtended<>(" / ");
-
-         String k ="";
-         k+=(char)3;
-        String[] files = input.split(k);
-
-        for (String file : files)
-        {
-            TreeItemExtended<String> treeNode;
-            if(file.charAt(0)=='P')
-            {
-                treeNode = new TreeItemExtended<>(file);
-                root.getChildren().add(treeNode);
-
-            }
-            if(file.charAt(0)=='F')
-            {
-                treeNode = new TreeItemExtended<>(file);
-               // treeNode.getChildren().add(new TreeItem<>(""));
-                root.getChildren().add(treeNode);
-
-            }
-
-        }
-        return root;
     }
 
     private void getDirectory()  {
@@ -198,30 +257,39 @@ public class MainScene {
 
                     TreeItem file = (TreeItem) newValue;
                     fileName.setText(file.getValue().toString());
-                    // do what ever you want
                     upload.setDisable(true);
                     download.setDisable(false);
                 }
 
             });
 
-            serverFiles.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
+        serverFiles.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
 
-                @Override
-                public void changed(ObservableValue observable, Object oldValue,
-                                    Object newValue) {
+            @Override
+            public void changed(ObservableValue observable, Object oldValue,
+                                Object newValue) {
 
-                    TreeItem file = (TreeItem) newValue;
-                    fileName.setText(file.getValue().toString());
-                    // do what ever you want
-                    download.setDisable(true);
+                TreeItemExtended file = (TreeItemExtended) newValue;
+                if(file!=serverFiles.getRoot()) {
+                    fileName.setText("/" + getDir(file) + file.getValue().toString());
                     upload.setDisable(false);
+                    download.setDisable(true);
                 }
+            }
 
-            });
+        });
+        
+    }
 
-
-
+    public String getDir(TreeItemExtended file)
+    {
+        String path="";
+        while (file.getParent() != serverFiles.getRoot()) {
+            String dir = file.getParent().getValue().toString() + "/";
+            path = dir + path;
+            file = (TreeItemExtended) file.getParent();
+        }
+        return path;
     }
 
 
