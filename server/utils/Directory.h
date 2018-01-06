@@ -16,7 +16,7 @@ public:
     static void createDirectories(string directory, string currentDirectory);
     static void removeDirectory(string directory, string currentDirectory);
     static string listFiles(string directory, string currentDirectory);
-    static string changeDirectory(string directory);
+    static string changeDirectory(string directory, string currentDirectory);
 
     static bool isFileExist(string filename);
 

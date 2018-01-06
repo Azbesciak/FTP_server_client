@@ -11,7 +11,8 @@ using namespace std;
 
 class FTP {
 public:
-    explicit FTP(int socket);
+    FTP();
+    explicit FTP(int socket);   //always use to proper initialization
     void parseCommand(string command);
     void parseCommand(char * command);
     void sendResponse(string message);
@@ -53,6 +54,9 @@ private:
     uint16_t dataConnectionPort;
 
     //threads
+        //used both in upload and download thread
+    struct sockaddr_in remote{};
+    bool dataConnectionOpened;
     enum ThreadType
     {
         Download,

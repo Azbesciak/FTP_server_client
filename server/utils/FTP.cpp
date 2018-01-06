@@ -23,8 +23,17 @@
 #include "ServerException.h"
 #include "TerminalUtils.h"
 
+//static fields
 vector<uint16_t> FTP::dataConnectionPorts;
 
+FTP::FTP() {
+    throw new ServerException("Use FTP(int socket) instead.");
+}
+FTP::FTP(int socket) : socketDescriptor(socket) {
+    currentDirectory = "/";
+    dataConnectionPort = 0;
+    dataConnectionOpened = false;
+}
 string FTP::toUpper(string data) {
     std::transform(data.begin(), data.end(), data.begin(), ::toupper);
     return data;
@@ -69,8 +78,8 @@ void FTP::parseCommand(string command) {
         if (splittedCommand.size() < 2) {
             listFiles(currentDirectory);
         } else {
-            //string directory = getDirectoryWithSpaces(splittedCommand);
-            listFiles(splittedCommand[1]);
+            string directory = getDirectoryWithSpaces(splittedCommand);
+            listFiles(directory);
         }
     } else if (splittedCommand[0].find("PWD") != string::npos) {
         //wypisz zawartrosc zmiennej currentDirectory
@@ -81,8 +90,8 @@ void FTP::parseCommand(string command) {
             changeDirectory("/");   //brak parametru, przejdz do glownego
         } else
         {
-            //string directory
-            changeDirectory(splittedCommand[1]);    //przejdz do wskazanego przez parametr
+            string directory = getDirectoryWithSpaces(splittedCommand);
+            changeDirectory(directory);    //przejdz do wskazanego przez parametr
         }
     } else if (splittedCommand[0].find("PASSV") != string::npos) {
         sendPASSVResponse();
@@ -103,10 +112,6 @@ void FTP::parseCommand(string command) {
     }
 }
 
-FTP::FTP(int socket) : socketDescriptor(socket) {
-    currentDirectory = "/";
-    dataConnectionPort = 0;
-}
 
 void FTP::sendResponse(string message) {
     message += "\r\n";
@@ -189,7 +194,7 @@ void FTP::listFiles(string dirName) {
  *
  */
 void FTP::changeDirectory(string name) {
-    currentDirectory = Directory::changeDirectory(name);
+    currentDirectory = Directory::changeDirectory(name, currentDirectory);
     string reply = "250 ";
     reply += currentDirectory;
     sendResponse(reply);
@@ -395,8 +400,53 @@ void *FTP::uploadThread(void *args) {
 
     uploadThreadActive = true; //TODO mutex
 
+    struct sockaddr_in sockAddr;
+/*
+    int socketNum = socket(AF_INET, SOCK_STREAM, 0);
+    if (socketNum < 0) {
+        printf("Socket error\n");
+        exit(-1);
+    }
+    //socket tylko uzywamy do czasu accept
+
+    memset(&sockAddr, 0, sizeof(sockAddr));
+    sockAddr.sin_family = AF_INET;
+    inet_pton(AF_INET, options->addr, &sockAddr.sin_addr);
+    sockAddr.sin_port = htons(static_cast<uint16_t>(options->port));
+    sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    //bindowanie do socketu
+    int time = 1;
+    setsockopt(socketNum, SOL_SOCKET, SO_REUSEADDR, (char *) &time, sizeof(time));
+    if (bind(socketNum, (struct sockaddr *) &sockAddr, sizeof(sockAddr)) < 0) {
+        perror("Binding error");
+        exit(-1);
+    }
 
 
+    if (listen(socketNum, QUEUE_SIZE) < 0) {
+        perror("Listen error");
+        exit(-1);
+    }
+    pthread_cleanup_push(cleanRoutine, (void *) 1);
+        socklen_t sockSize = sizeof(struct sockaddr);
+        while (runserver > 0) {
+            int connection_descriptor = accept(socketNum, (struct sockaddr *) &remote, &sockSize);
+            if (connection_descriptor < 0) {
+                perror("Client accepting error");
+                runserver = 0;
+                continue;
+            }
+
+            char remoteAddr[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
+            //pass structure with client's data port
+            printf("Podłączono klienta z adresem %s. Przypisany deskryptor %d\n", remoteAddr, connection_descriptor);
+            handleConnection(connection_descriptor, &remote);
+        }
+    pthread_cleanup_pop(true);
+    close(socketNum);
+*/
     uploadThreadActive = false;
 }
 
@@ -406,6 +456,7 @@ void *FTP::downloadThread(void *args) {
 
 
 
-    downloadThreadActive = false;}
+    downloadThreadActive = false;
+}
 
 
