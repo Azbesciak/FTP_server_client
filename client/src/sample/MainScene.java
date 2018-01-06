@@ -1,26 +1,15 @@
 package sample;
 
-import com.sun.xml.internal.ws.util.StringUtils;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.event.EventHandler;
-import javafx.scene.control.cell.TextFieldTreeCell;
+import javafx.event.EventHandler;;
 import javafx.scene.input.MouseEvent;
-
-import javax.swing.event.TreeWillExpandListener;
 import java.io.*;
-import java.lang.reflect.Array;
-import java.net.Socket;
-import java.net.SocketException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 
 public class MainScene {
@@ -124,16 +113,17 @@ public class MainScene {
                             activeNode = (TreeItemExtended) expanded.getParent();
                             System.out.println(activeNode);
                             listServerFiles(expanded);
+                            activeNode=expanded;
 
 
 
                     } else if (expanded == serverFiles.getRoot()) {
                         connection.command = "CWD";
-                        connection.argument = "/";
+                        connection.argument = "";
                         Thread thread = new Thread(connection);
                         thread.start();
                             thread.join();
-                            activeNode = (TreeItemExtended) serverFiles.getRoot();
+                            activeNode = expanded;
                             System.out.println(activeNode);
                             listServerFiles(expanded);
                             RemotePath.setText("/");
@@ -155,6 +145,33 @@ public class MainScene {
     }
 
 
+
+    public void RemoveServerDir() throws InterruptedException {
+        String dir = RemotePath.getText();
+        System.out.println(dir);
+        connection.command="RMD";
+        connection.argument=dir;
+        Thread thread = new Thread(connection);
+        thread.start();
+        thread.join();
+        if(connection.message.charAt(0)=='2') {
+            activeNode.getParent().setExpanded(false);
+            activeNode.getParent().setExpanded(true);
+        }
+    }
+    @FXML
+    public void MakeServerDir() throws  InterruptedException{
+        String dir = RemotePath.getText();
+        connection.command="MKD";
+        connection.argument=dir;
+        Thread thread = new Thread(connection);
+        thread.start();
+        thread.join();
+        if(connection.message.charAt(0)=='2') {
+            activeNode.setExpanded(false);
+            activeNode.setExpanded(true);
+        }
+    }
     private TreeItemExtended<String> initServerFiles(String input)
     {
        // String input = connection.LIST("/");
@@ -270,7 +287,7 @@ public class MainScene {
                                 Object newValue) {
 
                 TreeItemExtended file = (TreeItemExtended) newValue;
-                if(file!=serverFiles.getRoot()) {
+                if(file!=serverFiles.getRoot() && file.getValue()!=null) {
                     fileName.setText("/" + getDir(file) + file.getValue().toString());
                     upload.setDisable(false);
                     download.setDisable(true);

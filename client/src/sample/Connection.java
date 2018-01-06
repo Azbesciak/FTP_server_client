@@ -49,6 +49,14 @@ public class Connection implements  Runnable {
             {
                 cwd();
             }
+            if(command=="RMD")
+            {
+                rmd();
+            }
+            if(command=="MKD")
+            {
+                mkd();
+            }
 //
         } catch (Exception e) {
             System.out.println("Brak połączenia");
@@ -129,6 +137,18 @@ public class Connection implements  Runnable {
         writer.println(command);
         serverMessage = reader.readLine();
         System.out.println(serverMessage);
+    }
+
+    public void rmd() throws  IOException{
+        String command="RMD "+argument;
+        writer.println(command);
+        message = reader.readLine();
+    }
+
+    public void mkd() throws IOException{
+        String command="MKD "+argument;
+        writer.println(command);
+        message = reader.readLine();
     }
 
 }

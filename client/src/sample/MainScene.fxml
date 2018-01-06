@@ -33,8 +33,8 @@
                <TextField fx:id="fileName" layoutX="283.0" layoutY="200.0" prefHeight="25.0" prefWidth="241.0" />
                <Button fx:id="upload" disable="true" layoutX="373.0" layoutY="168.0" mnemonicParsing="false" text="Pobierz" />
                <Button fx:id="download" disable="true" layoutX="452.0" layoutY="168.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="61.0" text="Wyślij" />
-               <Button fx:id="addRemoteFolder" layoutX="582.0" layoutY="140.0" mnemonicParsing="false" prefHeight="55.0" prefWidth="126.0" text="Dodaj folder" />
-               <Button fx:id="deleteRemoteFolder" layoutX="735.0" layoutY="140.0" mnemonicParsing="false" prefHeight="55.0" prefWidth="114.0" text="Usuń folder" />
+               <Button fx:id="addRemoteFolder" layoutX="582.0" layoutY="140.0" mnemonicParsing="false" onMouseClicked="#MakeServerDir" prefHeight="55.0" prefWidth="126.0" text="Dodaj folder" />
+               <Button fx:id="deleteRemoteFolder" layoutX="735.0" layoutY="140.0" mnemonicParsing="false" onMouseClicked="#RemoveServerDir" prefHeight="55.0" prefWidth="114.0" text="Usuń folder" />
                <TextField fx:id="RemotePath" layoutX="590.0" layoutY="95.0" prefHeight="25.0" prefWidth="275.0" />
                <TextField fx:id="LocalPath" layoutX="18.0" layoutY="95.0" prefHeight="25.0" prefWidth="252.0" />
             </children>
