@@ -38,18 +38,18 @@ void FTP::parseCommand(string command) {
 
     if (splittedCommand[0].find("TYPE") != string::npos) {
         if (splittedCommand.size() < 2) {
-            throw ServerException("501 Błąd w składni parametrów.");
+            throw ServerException("501 Brak oczekiwanego prametru.");
         }
         setTransferType(splittedCommand[1]);
-    } else if (splittedCommand[0].find("MKDIR") != string::npos) {
+    } else if (splittedCommand[0].find("MKD") != string::npos) {
         if (splittedCommand.size() < 2) {
-            throw ServerException("501 Błąd w składni parametrów.");
+            throw ServerException("501 Brak oczekiwanego prametru.");
         }
         string dirToCreate = getDirectoryWithSpaces(splittedCommand);
         makeDirectory(dirToCreate);
-    } else if (splittedCommand[0].find("RMDIR") != string::npos) {
+    } else if (splittedCommand[0].find("RMD") != string::npos) {
         if (splittedCommand.size() < 2) {
-            throw ServerException("501 Błąd w składni parametrów.");
+            throw ServerException("501 Brak oczekiwanego prametru.");
         }
         string directoryToRemove = getDirectoryWithSpaces(splittedCommand);
         removeDirectory(directoryToRemove);
@@ -59,11 +59,10 @@ void FTP::parseCommand(string command) {
         } else {
             listFiles(splittedCommand[1]);
         }
-    } else if(splittedCommand[0].find("PWD") != string::npos)  {
+    } else if (splittedCommand[0].find("PWD") != string::npos) {
         //wypisz zawartrosc zmiennej currentDirectory
         printDirectory();
-    } else if(splittedCommand[0].find("CWD") != string::npos)
-    {
+    } else if (splittedCommand[0].find("CWD") != string::npos) {
         if(splittedCommand.size() < 2)
         {
             changeDirectory("/");   //brak parametru, przejdz do glownego
@@ -71,27 +70,26 @@ void FTP::parseCommand(string command) {
         {
             changeDirectory(splittedCommand[1]);    //przejdz do wskazanego przez parametr
         }
-    } else if(splittedCommand[0].find("PORT") != string::npos)
-    {
-        throw ServerException("500 Niezaimplementowana komenda.");
-    }else if(splittedCommand[0].find("PASSV") != string::npos)
-    {
-        throw ServerException("500 Niezaimplementowana komenda.");
-    }else if(splittedCommand[0].find("RETR") != string::npos)
-    {
-        //pobieranie plików z serwera do klienta
-        throw ServerException("500 Niezaimplementowana komenda.");
-    }else if(splittedCommand[0].find("STOR") != string::npos)
-    {
+    } else if (splittedCommand[0].find("PASSV") != string::npos) {
+        sendPASSVResponse();
+    } else if (splittedCommand[0].find("RETR") != string::npos) {
+        //wysylanie plików z serwera do klienta
+        if (splittedCommand.size() < 2) {
+            throw ServerException("501 Brak oczekiwanego prametru.");
+        }
+        putFile(splittedCommand[1]);
+    } else if (splittedCommand[0].find("STOR") != string::npos) {
         //wysylanie plikow od klineta na serwer
-        throw ServerException("500 Niezaimplementowana komenda.");
+        if (splittedCommand.size() < 2) {
+            throw ServerException("501 Brak oczekiwanego prametru.");
+        }
+        getFile(splittedCommand[1]);
     } else {
         throw ServerException("500 Komenda nierozpoznana.");
     }
 }
 
-FTP::FTP(int socket) {
-    this->socket = socket;
+FTP::FTP(int socket) : socket(socket) {
     currentDirectory = "/";
 }
 
@@ -101,14 +99,14 @@ void FTP::sendResponse(string message) {
     write(socket, message.c_str(), message.size());
 }
 
-//rozbija komende na zbior wyrazen, co spacje
-vector<string> FTP::splitCommand(string command) {
-    vector<string> pieces;
-    istringstream iss(command);
-    copy(istream_iterator<string>(iss),
-         istream_iterator<string>(),
-         back_inserter(pieces));
-    return pieces;
+
+void FTP::putFile(string filename) {
+    throw ServerException("500 Niezaimplementowana komenda.");
+}
+
+void FTP::getFile(string filename) {
+    throw ServerException("500 Niezaimplementowana komenda.");
+
 }
 
 //directory methods
@@ -181,36 +179,45 @@ void FTP::printDirectory() {
     sendResponse(currentDirectory);
 }
 
+//rozbija komende na zbior wyrazen, co spacje
+vector<string> FTP::splitCommand(string command) {
+    vector<string> pieces;
+    istringstream iss(command);
+    copy(istream_iterator<string>(iss),
+         istream_iterator<string>(),
+         back_inserter(pieces));
+    return pieces;
+}
 
 //example /dir1/named/ dir/dir2,  "named/ dir" -> "named dir"
 string FTP::getDirectoryWithSpaces(vector<string> command) {
     //at index 0 is command string
-    int iter = 1;
+    size_t iter = 1;
     string directory = command[iter];
 
     //checks if last char in a directory is a backslash that indicates a space
-    while(command[iter][command[iter].size() - 1] == '\\')
-    {
+    while (command[iter][command[iter].size() - 1] == '\\') {
         //remove backslash from directory
         directory.erase(directory.size() - 1, 1);
 
         //check if there is another string to add
-        if(command.size() - 1 >= (iter + 1))
-        {
+        if (command.size() - 1 >= (iter + 1)) {
             directory += char(32);  //add space
             directory += command[iter+1];
-        }
-        else
-        {
+        } else {
             break;
         }
         iter++;
     }
-    if(directory[directory.size() - 1] != '/')
-    {
+    if (directory[directory.size() - 1] != '/') {
         directory += '/';
     }
     return directory;
 }
+
+void FTP::sendPASSVResponse() {
+
+}
+
 
 

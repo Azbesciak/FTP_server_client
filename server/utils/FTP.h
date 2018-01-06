@@ -29,8 +29,10 @@ private:
 
     //file transfer stuff
     void setTransferType(string type);
-    void uploadFile(string filename);
-    void downloadFile(string filename);
+
+    void putFile(string filename);
+
+    void getFile(string filename);
 
     void listFiles(string dirName);
 
@@ -41,6 +43,8 @@ private:
     int dataTransferPort;
     string currentDirectory;
     string getDirectoryWithSpaces(vector<string> command);
+
+    void sendPASSVResponse();
 };
 
 
