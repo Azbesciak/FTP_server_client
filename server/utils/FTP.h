@@ -46,7 +46,8 @@ private:
     char transferType = 'A';
 
     string currentDirectory;
-    string getDirectoryWithSpaces(vector<string> command);
+
+    string getStringWithSpaces(vector<string> command);
 
     //PASSV command
     void sendPASSVResponse();
@@ -56,11 +57,18 @@ private:
     bool isPortReserved(uint16_t port);
     string getRandomPort();
     static vector<uint16_t> dataConnectionPorts;
+    pthread_mutex_t dataConnectionPorts_mutex = PTHREAD_MUTEX_INITIALIZER;
+
     uint16_t dataConnectionPort;
 
     //threads
         //used both in upload and download thread
     struct sockaddr_in remote{};
+    pthread_mutex_t dataConnectionOpened_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t dataConnectionSocket_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t fileToDownload_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t fileToUpload_mutex = PTHREAD_MUTEX_INITIALIZER;
+
     bool dataConnectionOpened;
     int dataConnectionSocket;
     enum ThreadType
@@ -75,6 +83,10 @@ private:
     //controlled by instance in main client's thread
     bool tryToDownloadFile = false;
     bool tryToUploadFile = false;
+
+    pthread_mutex_t tryToDownloadFile_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t tryToUploadFile_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
     pthread_t downloadThreadHandle = 0;
     pthread_t uploadThreadHandle = 0;

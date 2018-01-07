@@ -1,26 +1,6 @@
 #include "Server.h"
 #include "ServerConfig.h"
 
-/*
-	RFC
-	https://tools.ietf.org/html/rfc959
-	http://www.cs.put.poznan.pl/mboron/prez/zasady_projektow.pdf
-
-	Methods to implement:
-		ascii
-		binary
-		mkdir
-		rmdir
-		put
-		get
-
-	Dopisać odbieranie i wysyłanie danych - binarnie i tekstowo.
-	Dekodowanie poleceń ( + obsługa nieznanych poleceń - do tego też odpowiednia odpowiedź dla klienta) i formułowanie odpowiedzi.
-
-    sprawdzić dlaczego find zawsze znajduje MKD
-
-*/
-
 int runserver = 1;
 Client clients[MAX_THREADS + 1];
 int currentClientNumber = 0;
@@ -28,8 +8,8 @@ int currentClientNumber = 0;
 int main(int argc, char *argv[]) {
     string command;
 
-    char *serverAddr = argc == 3 ? argv[1] : (char *) DEFAULT_ADDR;
-    int port = argc == 2 ? atoi(argv[1]) : (argc == 3 ? atoi(argv[2]) : DEFAULT_PORT);
+    auto *serverAddr = (char *) DEFAULT_ADDR;
+    int port = argc == 2 ? atoi(argv[1]) : DEFAULT_PORT;
 
     int serverThread = createServerThread(serverAddr, port);
 
@@ -59,9 +39,6 @@ int createServerThread(char *addr, int port) {
     return create_result;
 }
 
-void cleanRoutine(void *arg) {
-    cout << "Cleaning routine\n";
-}
 
 //strtok - rozbija string z delimiterem
 void *startServer(void *serverOpts) {
@@ -69,7 +46,7 @@ void *startServer(void *serverOpts) {
     auto *options = (server_opts *) serverOpts;
     printf("Serwer FTP działa na adresie: %s:%d\n", options->addr, options->port);
 
-    struct sockaddr_in sockAddr;
+    struct sockaddr_in sockAddr{};
     struct sockaddr_in remote{};
 
     int socketNum = socket(AF_INET, SOCK_STREAM, 0);
@@ -118,6 +95,7 @@ void *startServer(void *serverOpts) {
             //dowidzenia
             string message = "500 Za dużo klientów.";
             write(connection_descriptor, message.c_str(), message.size());
+            close(connection_descriptor);
             continue;
         }
         handleConnection(connection_descriptor, &remote);
@@ -157,7 +135,9 @@ void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remo
     }
 
     clients[currentClientNumber] = *newClient;
+    pthread_mutex_lock(&currentClientNumber_mutex);
     currentClientNumber++;
+    pthread_mutex_unlock(&currentClientNumber_mutex);
 }
 
 //funkcja opisującą zachowanie wątku - musi przyjmować argument typu (void *) i zwracać (void *)
@@ -190,7 +170,6 @@ void *connection(void *t_data) {
         } else if (buffer[0] == 0) {
             cout << RED_TEXT("Klient z adresu " << remoteAddr << ", o deskryptorze " << client->socketDescriptor
                                                 << " się rozłączył!\n");
-            ftpClient->killDataConnectionThreads();
             keepConnection = 0;
             continue;
         } else {
@@ -200,19 +179,33 @@ void *connection(void *t_data) {
         memset(buffer, 0, BUFFER_SIZE);
     }
     delete ftpClient;
-    pthread_exit(NULL);
+    pthread_mutex_lock(&currentClientNumber_mutex);
+    currentClientNumber--;
+    pthread_mutex_unlock(&currentClientNumber_mutex);
+
+    pthread_exit(nullptr);
 }
 
 
 void parseCommand(string command) {
-    if (command.find("restart") != string::npos) {
-        cout << GREEN_TEXT("Restartowanie serwera.\n");
+    if (command.find("quit") != string::npos || command.find("quit") != string::npos) {
+        cout << GREEN_TEXT("Zamykanie serwera.\n");
         runserver = 0;
-        sleep(1);
-        runserver = 1;
-    } else if (command.find("stop") != string::npos) {
-        cout << GREEN_TEXT("Zatrzymywanie serwera.\n");
-        runserver = 0;
+    } else if (command.find("list") != string::npos) {
+        int iter = 1;
+        for (auto const &value: clients) {
+            if (value.socketDescriptor > 0) {
+                char remoteAddr[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &(value.IPv4Data->sin_addr), remoteAddr, INET_ADDRSTRLEN);
+
+                cout << iter++ << ". Klient, socket deskryptor: " << value.socketDescriptor
+                     << ", IP:" << remoteAddr << endl;
+            }
+        }
+        if (iter == 1) {
+            cout << RED_TEXT("Brak klientów") << endl;
+        }
+
     } else {
         cout << RED_TEXT("Brak zdefiniowanej funkcji dla ") << WHITE_TEXT(command) << "\n";
     }

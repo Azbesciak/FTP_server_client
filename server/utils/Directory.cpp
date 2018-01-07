@@ -42,7 +42,7 @@ void Directory::createDirectories(string directory, string currentDirectory) {
     }
 
     size_t pos = 0;
-    while ((pos = directory.find("/")) != string::npos) {
+    while ((pos = directory.find('/')) != string::npos) {
         string newDir(directory.substr(0, (int)pos));
         newPath += newDir;
 
@@ -231,10 +231,11 @@ bool Directory::isDirectoryExist(string dirname) {
 
     return S_ISDIR(st.st_mode);
 }
-bool Directory::isFileExist(string dirname) {
+
+bool Directory::isFileExist(string file) {
     struct stat st = {0};
 
-    if(!isDescriptorExist(dirname, &st))
+    if (!isDescriptorExist(file, &st))
         return false;
 
     return S_ISREG(st.st_mode);
@@ -245,10 +246,7 @@ bool Directory::isDescriptorExist(string descriptor, struct stat *st) {
     if (descriptor.find(getRootDir()) == string::npos) {
         descriptor = getRootDir() + descriptor;
     }
-    if (stat(descriptor.c_str(), st) == -1) {
-        return false;
-    }
-    return true;
+    return stat(descriptor.c_str(), st) != -1;
 }
 
 //converts backslashes to UNIX slashes
@@ -312,7 +310,4 @@ string Directory::convertRelativeAbsolutePath(string *directory, string *current
     return newPath;
 }
 
-bool Directory::isFile(string filename) {
-    return false;
-}
 

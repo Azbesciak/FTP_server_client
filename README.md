@@ -9,7 +9,7 @@ TO DO LIST:
   - [x] binary mode
   - [x] mkdir (MKD)
   - [x] rmdir (RMD)
-  - [ ] put (STOR)
-  - [ ] get (RETR)
+  - [x] put (STOR)
+  - [x] get (RETR)
   
   :+1:
