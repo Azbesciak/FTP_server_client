@@ -43,7 +43,7 @@ private:
 
     //A = ASCII
     //I = Binary
-    char transferType = 0;
+    char transferType = 'A';
 
     string currentDirectory;
     string getDirectoryWithSpaces(vector<string> command);
@@ -87,7 +87,7 @@ private:
     static void* newUploadThreadWrapper(void *object);
     static void *newDownloadThreadWrapper(void *object);
 
-    void prepareFileToDownload();
+    void prepareFileToTransfer(string *file);
 
     void setUpSocketForDataConnection();
 };
