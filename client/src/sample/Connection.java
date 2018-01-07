@@ -29,7 +29,7 @@ public class Connection implements  Runnable {
     public String argument;
     public TreeItem<File> fileToUpload;
     public Socket mainSocket;
-    public String fileToDownload;
+    public TreeItem fileToDownload;
     public TreeItem destinationFolder;
 
     public Connection(String addr,String port)
@@ -79,7 +79,7 @@ public class Connection implements  Runnable {
             }
             if(command=="RETR")
             {
-                //retr();
+                retr(fileToDownload);
             }
 
 
@@ -268,20 +268,62 @@ public class Connection implements  Runnable {
 
     }
 
-    public void retr(TreeItem<File> f) throws IOException {
+    public void retr(TreeItem<String> f) throws IOException {
         out = mainSocket.getOutputStream();
         in = mainSocket.getInputStream();
         writer = new PrintWriter(out, true);
         reader = new BufferedReader(new InputStreamReader(in));
-        if(f.getValue().isDirectory()==true)
+        if(f.getChildren().size()!=0)
         {
             File folder = new File(destinationFolder+getFileName(f));
             folder.mkdir();
-            argument = getFileName(f);
-            cwd();
+            destinationFolder.setValue(folder);
+            if(f.getChildren()==null)
+            {
+                argument = getFileName(f);
+                String input = list();
+                String k ="";
+                k+=(char)3;
+                String[] files = input.split(k);
+
+                for (String file : files)
+                {
+                    TreeItemExtended<String> treeNode = new TreeItemExtended<>(file);
+                    f.getChildren().add(treeNode);
+                }
+            }
+
+            for(TreeItem file: f.getChildren())
+            {
+                retr(file);
+            }
 
 
+        }
+        else
+        {
+            if(client.isClosed())
+            {
+                client = new Socket(addr,port);
+            }
+            command = "RETR " + getFileName(f);
+            writer.println(command);
+            message = reader.readLine();
+            String path = destinationFolder.getValue().toString()+getFileName(f);
+            File downloadFile = new File(path);
+            OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(downloadFile));
+            InputStream is = client.getInputStream();
+            byte[] buffer = new byte[1];
+            int bytesRead = -1;
 
+            while ((bytesRead = is.read(buffer)) != -1) {
+                outputStream.write(buffer);
+            }
+
+            outputStream.close();
+            is.close();
+            message = reader.readLine();
+        }
         }
 
 
@@ -289,7 +331,7 @@ public class Connection implements  Runnable {
 //        destinationFolder.getChildren().removeAll();
 //        destinationFolder.getChildren().clear();
 
-    }
+
 
     public String getFileName(TreeItem file)
     {
@@ -299,16 +341,6 @@ public class Connection implements  Runnable {
         String name = pom[pom.length-1];
         return name;
     }
-
-    public String getServerFileName(String path)
-    {
-
-        String pom[]=path.split("/");
-        String name = pom[pom.length-1];
-        return name;
-    }
-
-
 
 }
 

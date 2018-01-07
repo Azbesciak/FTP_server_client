@@ -33,6 +33,7 @@ public class MainScene {
     @FXML
     private Button connect;
     private TreeItem<File> selectedLocalFile;
+    private TreeItem<File> selectedRemoteFile;
     public TextField LocalPath;
     public TreeItem destinationFolder;
     private Connection connection;
@@ -206,7 +207,7 @@ public class MainScene {
 
     public void download() throws IOException, InterruptedException {
         chooseTransferMode();
-        transferConnection.fileToDownload = fileName.getText();
+        transferConnection.fileToDownload = selectedRemoteFile;
         transferConnection.command="RETR";
         transferConnection.argument=LocalPath.getText();
         transferConnection.destinationFolder = destinationFolder;
@@ -371,6 +372,7 @@ public class MainScene {
                     fileName.setText("/" + getDir(file) + file.getValue().toString());
                     upload.setDisable(true);
                     download.setDisable(false);
+                    selectedRemoteFile = file;
                 }
             }
 
