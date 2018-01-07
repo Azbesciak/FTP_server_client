@@ -312,3 +312,7 @@ string Directory::convertRelativeAbsolutePath(string *directory, string *current
     return newPath;
 }
 
+bool Directory::isFile(string filename) {
+    return false;
+}
+

@@ -460,14 +460,13 @@ void *FTP::uploadThread(void *args) {
     int connection_descriptor = accept(dataConnectionSocket, (struct sockaddr *) &remote, &sockSize);
     if (connection_descriptor < 0) {
         perror("Client accepting error");
-        dataConnectionOpened = 0;
     }
 
     //zapisnie adresu
     char remoteAddr[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
 #if DEBUG
-    cout << "Upload thread: Podłączono klienta z adresem" << remoteAddr << "Przypisany deskryptor"
+    cout << "Upload thread: Podłączono klienta z adresem " << remoteAddr << ". Przypisany deskryptor"
          << connection_descriptor << endl;
 #endif
 
@@ -486,7 +485,8 @@ void *FTP::uploadThread(void *args) {
         sendResponse("500 Nie znaleziono pliku do wysłania.");
     } else {
 #if DEBUG
-        cout << "Upload thread: Przygotowywanie pliku do wyslania " << fileToUpload << endl;
+        cout << "Upload thread: Przygotowywanie pliku do wyslania " << fileToUpload
+             << "Wysylanie w trybie " << transferType << endl;
 #endif
         bool connectionOpened = true;
 
@@ -520,12 +520,11 @@ void *FTP::uploadThread(void *args) {
     if (!downloadThreadActive) {
         //close socket only when data is not being downloaded
 
-        close(dataConnectionSocket);
+        //close(dataConnectionSocket);
         close(connection_descriptor);
 #if DEBUG
         cout << "Upload thread. Data connection closed - socekt " << connection_descriptor << endl;
 #endif
-        dataConnectionOpened = false;
 
     }
 
@@ -548,7 +547,7 @@ void *FTP::downloadThread(void *args) {
         cout << "Download thread, client " << socketDescriptor << " accepting error.\n";
 #endif
         perror("Download thread.Client accepting error");
-        dataConnectionOpened = 0;
+        //;
     }
 
     //zapisnie adresu
@@ -596,7 +595,8 @@ void *FTP::downloadThread(void *args) {
     //TODO mutex on socket descriptor
     if (!uploadThreadActive) {
         //close socket only when data is not being uploaded
-        close(dataConnectionSocket);
+        //close(dataConnectionSocket);
+        //close socket from client
         close(connection_descriptor);
 #if DEBUG
         cout << "Download thread. Data connection closed - socekt " << connection_descriptor << endl;
