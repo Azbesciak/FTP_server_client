@@ -25,6 +25,7 @@ int runserver = 1;
 
 int main(int argc, char *argv[]) {
     string command;
+
     char *serverAddr = argc == 3 ? argv[1] : (char *) DEFAULT_ADDR;
     int port = argc == 2 ? atoi(argv[1]) : (argc == 3 ? atoi(argv[2]) : DEFAULT_PORT);
 
@@ -96,23 +97,23 @@ void *startServer(void *serverOpts) {
         perror("Listen error");
         exit(-1);
     }
-    pthread_cleanup_push(cleanRoutine, (void *) 1);
-        socklen_t sockSize = sizeof(struct sockaddr);
-        while (runserver > 0) {
-            int connection_descriptor = accept(socketNum, (struct sockaddr *) &remote, &sockSize);
-            if (connection_descriptor < 0) {
-                perror("Client accepting error");
-                runserver = 0;
-                continue;
-            }
-
-            char remoteAddr[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
-            //pass structure with client's data port
-            printf("Podłączono klienta z adresem %s. Przypisany deskryptor %d\n", remoteAddr, connection_descriptor);
-            handleConnection(connection_descriptor, &remote);
+    //pthread_cleanup_push(cleanRoutine, (void *) 1);
+    socklen_t sockSize = sizeof(struct sockaddr);
+    while (runserver > 0) {
+        int connection_descriptor = accept(socketNum, (struct sockaddr *) &remote, &sockSize);
+        if (connection_descriptor < 0) {
+            perror("Client accepting error");
+            runserver = 0;
+            continue;
         }
-    pthread_cleanup_pop(true);
+
+        char remoteAddr[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
+        //pass structure with client's data port
+        printf("Podłączono klienta z adresem %s. Przypisany deskryptor %d\n", remoteAddr, connection_descriptor);
+        handleConnection(connection_descriptor, &remote);
+    }
+    //pthread_cleanup_pop(true);
     close(socketNum);
     exit(0);
 
@@ -141,6 +142,7 @@ void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remo
         exit(-1);
     }
 }
+
 //funkcja opisującą zachowanie wątku - musi przyjmować argument typu (void *) i zwracać (void *)
 void *connection(void *t_data) {
     pthread_detach(pthread_self());
@@ -149,7 +151,8 @@ void *connection(void *t_data) {
     char remoteAddr[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(th_data->remote->sin_addr), remoteAddr, INET_ADDRSTRLEN);
 
-    cout << "Inicjalizacja się powiodła. Deskryptor " << GREEN_TEXT(th_data->socketDescriptor) << ", trafił z adresu " << GREEN_TEXT(remoteAddr) << ".\n";
+    cout << "Inicjalizacja się powiodła. Deskryptor " << GREEN_TEXT(th_data->socketDescriptor) << ", trafił z adresu "
+         << GREEN_TEXT(remoteAddr) << ".\n";
 
     auto *buffer = new char[BUFFER_SIZE];
     int keepConnection = 1;
@@ -162,13 +165,14 @@ void *connection(void *t_data) {
             displayRequest(th_data->socketDescriptor, buffer);
             try {
                 ftpClient->parseCommand(buffer);
-            } catch (ServerException& errorMessage) {
+            } catch (ServerException &errorMessage) {
                 ftpClient->sendResponse(errorMessage.what());
             } catch (...) {
                 ftpClient->sendResponse("500 Nieznany problem.");
             }
         } else if (buffer[0] == 0) {
-            cout << RED_TEXT("Klient z adresu " << remoteAddr << ", o deskryptorze " << th_data->socketDescriptor << " się rozłączył!\n");
+            cout << RED_TEXT("Klient z adresu " << remoteAddr << ", o deskryptorze " << th_data->socketDescriptor
+                                                << " się rozłączył!\n");
             ftpClient->killDataConnectionThreads();
             keepConnection = 0;
             continue;
