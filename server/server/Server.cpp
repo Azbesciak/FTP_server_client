@@ -22,6 +22,8 @@
 */
 
 int runserver = 1;
+Client clients[MAX_THREADS + 1];
+int currentClientNumber = 0;
 
 int main(int argc, char *argv[]) {
     string command;
@@ -63,7 +65,6 @@ void cleanRoutine(void *arg) {
 
 //strtok - rozbija string z delimiterem
 void *startServer(void *serverOpts) {
-
 
     auto *options = (server_opts *) serverOpts;
     printf("Serwer FTP działa na adresie: %s:%d\n", options->addr, options->port);
@@ -111,6 +112,14 @@ void *startServer(void *serverOpts) {
         inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
         //pass structure with client's data port
         printf("Podłączono klienta z adresem %s. Przypisany deskryptor %d\n", remoteAddr, connection_descriptor);
+
+        if(currentClientNumber >= MAX_THREADS)
+        {
+            //dowidzenia
+            string message = "500 Za dużo klientów.";
+            write(connection_descriptor, message.c_str(), message.size());
+            continue;
+        }
         handleConnection(connection_descriptor, &remote);
     }
     //pthread_cleanup_pop(true);
@@ -135,34 +144,42 @@ void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remo
     t_data->socketDescriptor = connection_socket_descriptor;
     t_data->remote = remote;
 
+    Client *newClient = new Client();
+    newClient->socketDescriptor = connection_socket_descriptor;
+    newClient->IPv4Data = remote;
+    newClient->dataPort = 0;
+
     //tworzy watek dla nowego klienta
-    create_result = pthread_create(&clientThread, nullptr, connection, (void *) t_data);
+    create_result = pthread_create(&clientThread, nullptr, connection, (void *) newClient);
     if (create_result != 0) {
         printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", create_result);
         exit(-1);
     }
+
+    clients[currentClientNumber] = *newClient;
+    currentClientNumber++;
 }
 
 //funkcja opisującą zachowanie wątku - musi przyjmować argument typu (void *) i zwracać (void *)
 void *connection(void *t_data) {
     pthread_detach(pthread_self());
-    auto *th_data = (struct thread_data_t *) t_data;
+    Client *client = (Client*) t_data;
 
     char remoteAddr[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &(th_data->remote->sin_addr), remoteAddr, INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &(client->IPv4Data->sin_addr), remoteAddr, INET_ADDRSTRLEN);
 
-    cout << "Inicjalizacja się powiodła. Deskryptor " << GREEN_TEXT(th_data->socketDescriptor) << ", trafił z adresu "
+    cout << "Inicjalizacja się powiodła. Deskryptor " << GREEN_TEXT(client->socketDescriptor) << ", trafił z adresu "
          << GREEN_TEXT(remoteAddr) << ".\n";
 
     auto *buffer = new char[BUFFER_SIZE];
     int keepConnection = 1;
-    auto *ftpClient = new FTP(th_data->socketDescriptor);
+    auto *ftpClient = new FTP(client);
 
     //main client's loop
     while (keepConnection > 0) {
-        ssize_t value = read(th_data->socketDescriptor, buffer, BUFFER_SIZE);
+        ssize_t value = read(client->socketDescriptor, buffer, BUFFER_SIZE);
         if (value > 0) {
-            displayRequest(th_data->socketDescriptor, buffer);
+            displayRequest(client->socketDescriptor, buffer);
             try {
                 ftpClient->parseCommand(buffer);
             } catch (ServerException &errorMessage) {
@@ -171,7 +188,7 @@ void *connection(void *t_data) {
                 ftpClient->sendResponse("500 Nieznany problem.");
             }
         } else if (buffer[0] == 0) {
-            cout << RED_TEXT("Klient z adresu " << remoteAddr << ", o deskryptorze " << th_data->socketDescriptor
+            cout << RED_TEXT("Klient z adresu " << remoteAddr << ", o deskryptorze " << client->socketDescriptor
                                                 << " się rozłączył!\n");
             ftpClient->killDataConnectionThreads();
             keepConnection = 0;
@@ -183,7 +200,6 @@ void *connection(void *t_data) {
         memset(buffer, 0, BUFFER_SIZE);
     }
     delete ftpClient;
-    delete (struct thread_data_t *) t_data;
     pthread_exit(NULL);
 }
 

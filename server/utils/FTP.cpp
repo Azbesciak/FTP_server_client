@@ -36,6 +36,14 @@ FTP::FTP(int socket) : socketDescriptor(socket) {
     dataConnectionPort = 0;
     dataConnectionOpened = false;
 }
+FTP::FTP(Client *client) {
+    clientData = client;
+}
+
+FTP::~FTP() {
+    killDataConnectionThreads();
+    delete clientData;
+}
 
 string FTP::toUpper(string data) {
     std::transform(data.begin(), data.end(), data.begin(), ::toupper);
@@ -138,11 +146,8 @@ void FTP::getFile(string filename) {
     }
 
     //TODO mutex
-
+    sendResponse("226 Połączenie otwarte.");
     fileToDownload = filename;
-
-
-    //send 226 reply after sending data
 }
 
 //directory methods
@@ -446,7 +451,7 @@ void *FTP::uploadThread(void *args) {
     //wait for connection from client
     cout << "Oczekiwanie na połączenie na porcie " << dataConnectionPort << endl;
     socklen_t sockSize = sizeof(struct sockaddr);
-    int connection_descriptor = accept(socketDescriptor, (struct sockaddr *) &remote, &sockSize);
+    int connection_descriptor = accept(dataConnectionSocket, (struct sockaddr *) &remote, &sockSize);
     if (connection_descriptor < 0) {
         perror("Client accepting error");
         dataConnectionOpened = 0;
@@ -537,12 +542,10 @@ void *FTP::downloadThread(void *args) {
 
     //buffer for data
     auto *buffer = new char[BUFFER_SIZE];
-
     while (connectionOpened) {
         memset(buffer, 0, BUFFER_SIZE);
-        ssize_t value = read(dataConnectionSocket, buffer, BUFFER_SIZE);
-        if(value > -1)
-        {
+        ssize_t value = read(connection_descriptor, buffer, BUFFER_SIZE);
+        if(value > -1) {
             if (value == 0) {
                 file.write(buffer, value - 1);
                 connectionOpened = false;
