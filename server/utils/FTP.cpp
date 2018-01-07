@@ -485,7 +485,7 @@ void *FTP::uploadThread(void *args) {
     //TODO mutex on socket descriptor
     if (!downloadThreadActive) {
         //close socket only when data is not being downloaded
-        if (dataConnectionSocket != 0) {
+        if (dataConnectionSocket == 0) {
             close(dataConnectionSocket);
             dataConnectionOpened = false;
         }
@@ -539,26 +539,28 @@ void *FTP::downloadThread(void *args) {
     auto *buffer = new char[BUFFER_SIZE];
 
     while (connectionOpened) {
+        memset(buffer, 0, BUFFER_SIZE);
         ssize_t value = read(dataConnectionSocket, buffer, BUFFER_SIZE);
-        //check for EOT end of tranmission
-        if (value == EOF) {
-            connectionOpened = false;
-            continue;
+        if(value > -1)
+        {
+            if (value == 0) {
+                file.write(buffer, value - 1);
+                connectionOpened = false;
+                continue;
+            } else {
+                file.write(buffer, value);
+            }
         }
-        if (buffer[value - 1] == EOF) {
-            file.write(buffer, value - 1);
-            connectionOpened = false;
-            continue;
-        }
-        file.write(buffer, value);
     }
 
     file.close();
-
+#if DEBUG
+    cout << "Download thread: Plik zapisany " << fileToUpload << endl;
+#endif
     //TODO mutex on socket descriptor
     if (!uploadThreadActive) {
         //close socket only when data is not being downloaded
-        if (dataConnectionSocket != 0) {
+        if (dataConnectionSocket == 0) {
             close(dataConnectionSocket);
             dataConnectionOpened = false;
         }
@@ -605,9 +607,7 @@ void FTP::setUpSocketForDataConnection() {
     }
     memset(&sockAddr, 0, sizeof(sockAddr));
     sockAddr.sin_family = AF_INET;
-    inet_pton(AF_INET, DEFAULT_ADDR, &sockAddr.sin_addr);
-    sockAddr.sin_port = dataConnectionPort;
-    cout << "Data conn port " << dataConnectionPort << endl;
+    sockAddr.sin_port = htons(dataConnectionPort);
     sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     //bindowanie do socketu
