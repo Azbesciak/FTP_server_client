@@ -385,7 +385,7 @@ string FTP::getRandomPort() {
     //add port to global ports
     FTP::dataConnectionPorts.push_back(port);
     //set port in this instance
-    dataConnectionPort = port;
+    dataConnectionPort = DEFAULT_DATACONNECTION_PORT;
 
 
     string portStr;
