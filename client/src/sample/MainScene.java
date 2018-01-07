@@ -228,24 +228,24 @@ public class MainScene {
 
 
 
-    public void passiveModePort() throws InterruptedException {
+    public String passiveModePort() throws InterruptedException, IOException {
         connection.command="PASV";
         Thread thread = new Thread(connection);
         thread.start();
         thread.join();
-//        String input[] = connection.message.split(" ");
-//        String pom[] = input[1].split(",");
-//        Integer p1= Integer.valueOf(pom[0]);
-//        Integer p2= Integer.valueOf(pom[1].substring(0,pom[1].length()-1));
-//        Integer port = p1*256+p2;
-       // return port.toString();
+        validate();
+        String input[] = connection.message.split(" ");
+        String pom[] = input[1].split(",");
+        Integer p1= Integer.valueOf(pom[0]);
+        Integer p2= Integer.valueOf(pom[1].substring(0,pom[1].length()-1));
+        Integer port = p1*256+p2;
+        return port.toString();
 
     }
 
     public void establishTrasnferConnection() throws InterruptedException, IOException {
-        //String port = passiveModePort();
-        passiveModePort();
-        String port = "10002";
+        String port = passiveModePort();
+        //String port = "10002";
         String addr = connection.addr;
         transferConnection  = new Connection(addr,port);
         transferConnection.mainSocket = connection.client;
