@@ -29,6 +29,8 @@ public class Connection implements  Runnable {
     public String argument;
     public TreeItem<File> fileToUpload;
     public Socket mainSocket;
+    public String fileToDownload;
+    public TreeItem destinationFolder;
 
     public Connection(String addr,String port)
     {
@@ -73,11 +75,18 @@ public class Connection implements  Runnable {
             if(command=="STOR")
             {
                 stor(fileToUpload);
+
             }
+            if(command=="RETR")
+            {
+                //retr();
+            }
+
 
 //
         } catch (Exception e) {
-            System.out.println("Brak połączenia");
+
+            System.out.println(e.getMessage());
         }
     }
 
@@ -211,7 +220,15 @@ public class Connection implements  Runnable {
             argument = getFileName(f);
             mkd();
             cwd();
-            for(TreeItem file : fileToUpload.getChildren())
+            f.getChildren().removeAll();
+            f.getChildren().clear();
+            File[] listOfFiles = f.getValue().listFiles();
+            if (listOfFiles != null) {
+                for (File file : listOfFiles) {
+                    f.getChildren().add(new TreeItem<File>(file));
+                }
+            }
+            for(TreeItem file : f.getChildren())
             {
                 stor(file);
             }
@@ -221,27 +238,56 @@ public class Connection implements  Runnable {
             String dir="";
             for(int i=0;i<pom.length-1;i++)
             {
-                dir+=pom[i];
+                dir+=pom[i]+"/";
             }
+            argument = "/";
+            cwd();
             argument = dir;
             cwd();
         }
         else
         {
+
+            if(client.isClosed())
+            {
+                client = new Socket(addr,port);
+            }
             command = "STOR " + getFileName(f);
             writer.println(command);
-          //  message = reader.readLine();
+            message = reader.readLine();
             DataOutputStream dos = new DataOutputStream(client.getOutputStream());
             FileInputStream fis = new FileInputStream(f.getValue());
             byte[] buffer = new byte[4096];
             while (fis.read(buffer) > 0) {
                 dos.write(buffer);
             }
-            client.getOutputStream().close();
-            client.getInputStream().close();
             fis.close();
             dos.close();
+            message = reader.readLine();
         }
+
+    }
+
+    public void retr(TreeItem<File> f) throws IOException {
+        out = mainSocket.getOutputStream();
+        in = mainSocket.getInputStream();
+        writer = new PrintWriter(out, true);
+        reader = new BufferedReader(new InputStreamReader(in));
+        if(f.getValue().isDirectory()==true)
+        {
+            File folder = new File(destinationFolder+getFileName(f));
+            folder.mkdir();
+            argument = getFileName(f);
+            cwd();
+
+
+
+        }
+
+
+
+//        destinationFolder.getChildren().removeAll();
+//        destinationFolder.getChildren().clear();
 
     }
 
@@ -253,6 +299,16 @@ public class Connection implements  Runnable {
         String name = pom[pom.length-1];
         return name;
     }
+
+    public String getServerFileName(String path)
+    {
+
+        String pom[]=path.split("/");
+        String name = pom[pom.length-1];
+        return name;
+    }
+
+
 
 }
 

@@ -34,7 +34,10 @@ public class MainScene {
     private Button connect;
     private TreeItem<File> selectedLocalFile;
     public TextField LocalPath;
+    public TreeItem destinationFolder;
     private Connection connection;
+    private Connection transferConnection;
+
     @FXML
     private Label connectionStatus;
     @FXML
@@ -77,6 +80,7 @@ public class MainScene {
         Thread thread = new Thread(connection);
         thread.start();
         thread.join();
+        establishTrasnferConnection();
         connection.command="LIST";
         connection.argument="";
         thread = new Thread(connection);
@@ -119,10 +123,15 @@ public class MainScene {
                         thread.start();
 
                             thread.join();
-                            activeNode = (TreeItemExtended) expanded.getParent();
+                            //activeNode = (TreeItemExtended) expanded.getParent();
                             System.out.println(activeNode);
                             listServerFiles(expanded);
-                          //  activeNode=expanded;
+                        connection.command = "CWD";
+                        connection.argument = expanded.getValue().toString();
+                        thread = new Thread(connection);
+                        thread.start();
+                        thread.join();
+                        activeNode=expanded;
 
 
 
@@ -151,6 +160,8 @@ public class MainScene {
 
             }
         });
+
+
     }
 
 
@@ -183,21 +194,33 @@ public class MainScene {
     }
 
     public void upload() throws InterruptedException, IOException {
-        //String port = passiveModePort();
-        passiveModePort();
-        String port = "10002";
-        String addr = connection.addr;
-        Connection uploadConnection = new Connection(addr,port);
-        uploadConnection.mainSocket = connection.client;
-        uploadConnection.connect();
+        chooseTransferMode();
+        transferConnection.fileToUpload = selectedLocalFile;
+        transferConnection.command="STOR";
+        Thread thread = new Thread(transferConnection);
+        thread.start();
+        thread.join();
+        activeNode.setExpanded(false);
+        activeNode.setExpanded(true);
+    }
+
+    public void download() throws IOException, InterruptedException {
+        chooseTransferMode();
+        transferConnection.fileToDownload = fileName.getText();
+        transferConnection.command="RETR";
+        transferConnection.argument=LocalPath.getText();
+        transferConnection.destinationFolder = destinationFolder;
+        Thread thread = new Thread(transferConnection);
+        thread.start();
+        thread.join();
+
+
+    }
+
+    public void chooseTransferMode() throws IOException {
         connection.command="MODE";
         connection.argument=group.getSelectedToggle().getUserData().toString();
         connection.setTransmissionMode();
-        uploadConnection.fileToUpload = selectedLocalFile;
-        uploadConnection.command="STOR";
-        Thread thread = new Thread(uploadConnection);
-        thread.start();
-        thread.join();
     }
 
 
@@ -215,6 +238,16 @@ public class MainScene {
 //        Integer port = p1*256+p2;
        // return port.toString();
 
+    }
+
+    public void establishTrasnferConnection() throws InterruptedException {
+        //String port = passiveModePort();
+        passiveModePort();
+        String port = "10002";
+        String addr = connection.addr;
+        transferConnection  = new Connection(addr,port);
+        transferConnection.mainSocket = connection.client;
+        transferConnection.connect();
     }
     private TreeItemExtended<String> initServerFiles(String input)
     {
@@ -288,8 +321,10 @@ public class MainScene {
                     LocalPath.setText(expanded.getValue().toString());
                    if(expanded.getValue().toString()=="Local Computer")
                     {
+
                         LocalPath.setText("\\");
                     }
+                    destinationFolder = expanded;
 
                 }
                 ObservableList<TreeItem<File>> files = expanded.getChildren();

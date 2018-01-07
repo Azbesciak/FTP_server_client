@@ -32,7 +32,7 @@
                <Button fx:id="addLocalFolder" layoutX="14.0" layoutY="138.0" mnemonicParsing="false" prefHeight="55.0" prefWidth="126.0" text="Dodaj folder" />
                <Button fx:id="deleteLocalFolder" layoutX="166.0" layoutY="138.0" mnemonicParsing="false" prefHeight="55.0" prefWidth="114.0" text="Usuń folder" />
                <TextField fx:id="fileName" layoutX="283.0" layoutY="200.0" prefHeight="25.0" prefWidth="241.0" />
-               <Button fx:id="download" disable="true" layoutX="373.0" layoutY="168.0" mnemonicParsing="false" text="Pobierz" />
+               <Button fx:id="download" disable="true" layoutX="373.0" layoutY="168.0" mnemonicParsing="false" onMouseClicked="#download" text="Pobierz" />
                <Button fx:id="upload" disable="true" layoutX="452.0" layoutY="168.0" mnemonicParsing="false" onMouseClicked="#upload" prefHeight="25.0" prefWidth="61.0" text="Wyślij" />
                <Button fx:id="addRemoteFolder" layoutX="582.0" layoutY="140.0" mnemonicParsing="false" onMouseClicked="#makeServerDir" prefHeight="55.0" prefWidth="126.0" text="Dodaj folder" />
                <Button fx:id="deleteRemoteFolder" layoutX="735.0" layoutY="140.0" mnemonicParsing="false" onMouseClicked="#removeServerDir" prefHeight="55.0" prefWidth="114.0" text="Usuń folder" />
