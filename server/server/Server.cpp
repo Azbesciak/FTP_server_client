@@ -150,7 +150,7 @@ void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remo
     newClient->dataPort = 0;
 
     //tworzy watek dla nowego klienta
-    create_result = pthread_create(&clientThread, nullptr, connection, (void *) newClient);
+    create_result = pthread_create(&clientThread, nullptr, connection, (void *) t_data);
     if (create_result != 0) {
         printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", create_result);
         exit(-1);
@@ -163,17 +163,17 @@ void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remo
 //funkcja opisującą zachowanie wątku - musi przyjmować argument typu (void *) i zwracać (void *)
 void *connection(void *t_data) {
     pthread_detach(pthread_self());
-    Client *client = (Client*) t_data;
+    auto *client = (struct thread_data_t *) t_data;
 
     char remoteAddr[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &(client->IPv4Data->sin_addr), remoteAddr, INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &(client->remote->sin_addr), remoteAddr, INET_ADDRSTRLEN);
 
     cout << "Inicjalizacja się powiodła. Deskryptor " << GREEN_TEXT(client->socketDescriptor) << ", trafił z adresu "
          << GREEN_TEXT(remoteAddr) << ".\n";
 
     auto *buffer = new char[BUFFER_SIZE];
     int keepConnection = 1;
-    auto *ftpClient = new FTP(client);
+    auto *ftpClient = new FTP(client->socketDescriptor);
 
     //main client's loop
     while (keepConnection > 0) {

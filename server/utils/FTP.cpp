@@ -124,7 +124,7 @@ void FTP::parseCommand(string command) {
 
 void FTP::sendResponse(string message) {
     message += "\r\n";
-    cout << "\t" << MAGENTA_TEXT("odpowiedź do " << socket << ":\t") << GREEN_TEXT(message);
+    cout << "\t" << MAGENTA_TEXT("odpowiedź do " << socketDescriptor << ":\t") << GREEN_TEXT(message);
     write(socketDescriptor, message.c_str(), message.size());
 }
 
