@@ -188,15 +188,7 @@ void *connection(void *t_data) {
 
 
 void parseCommand(string command) {
-    if (command.find("restart") != string::npos) {
-        cout << GREEN_TEXT("Restartowanie serwera.\n");
-        runserver = 0;
-        sleep(1);
-        runserver = 1;
-    } else if (command.find("stop") != string::npos) {
-        cout << GREEN_TEXT("Zatrzymywanie serwera.\n");
-        runserver = 0;
-    } else if (command.find("quit") != string::npos || command.find("quit") != string::npos) {
+    if (command.find("quit") != string::npos || command.find("quit") != string::npos) {
         cout << GREEN_TEXT("Zamykanie serwera.\n");
         runserver = 0;
     } else if (command.find("list") != string::npos) {
