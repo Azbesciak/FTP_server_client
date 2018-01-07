@@ -422,7 +422,7 @@ string FTP::getRandomPort() {
     //set port in this instance
     pthread_mutex_unlock(&dataConnectionPorts_mutex);
 
-    dataConnectionPort = DEFAULT_DATACONNECTION_PORT;
+    dataConnectionPort = port;
 
     string portStr;
     auto *temp = new char[20];
