@@ -33,7 +33,7 @@ public class MainScene {
     @FXML
     private Button connect;
     private TreeItem<File> selectedLocalFile;
-    private TreeItem<File> selectedRemoteFile;
+    private TreeItemExtended selectedRemoteFile;
     public TextField LocalPath;
     public TreeItem destinationFolder;
     private Connection connection;
@@ -52,16 +52,6 @@ public class MainScene {
         binary.setUserData("BINARY");
         ascii.setToggleGroup(group);
         ascii.setUserData("ASCII");
-        files.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                if(event.getClickCount() == 2)
-                {
-                    ObservableList<TreeItem<File>> file = files.getSelectionModel().getSelectedItems();
-                    System.out.println(file.get(0).getValue());
-                }
-            }
-        });
         listFiles();
         getDirectory();
     }
@@ -74,99 +64,109 @@ public class MainScene {
 
 
     @FXML
-    private void connectWithServer() throws InterruptedException {
+    private void connectWithServer()   {
 
-        connection = new Connection(serverAddress.getText(),portNumber.getText());
-        connection.command="CONNECT";
-        Thread thread = new Thread(connection);
-        thread.start();
-        thread.join();
-        establishTrasnferConnection();
-        connection.command="LIST";
-        connection.argument="";
-        thread = new Thread(connection);
-        thread.start();
-        thread.join();
-        serverFiles.setRoot(initServerFiles(connection.message));
-        activeNode= (TreeItemExtended) serverFiles.getRoot();
-        serverFiles.getRoot().addEventHandler(TreeItemExtended.branchExpandedEvent(), new EventHandler() {
+        try {
+            connection = new Connection(serverAddress.getText(), portNumber.getText());
+            connection.command = "CONNECT";
+            connection.connect();
+            validate();
+            establishTrasnferConnection();
+            validate();
+            connection.command = "LIST";
+            connection.argument = "";
+            Thread thread = new Thread(connection);
+            thread.start();
+            thread.join();
+            serverFiles.setRoot(initServerFiles(connection.message));
+            activeNode = (TreeItemExtended) serverFiles.getRoot();
+            serverFiles.getRoot().addEventHandler(TreeItemExtended.branchExpandedEvent(), new EventHandler() {
 
-            public void handle(Event e) {
-                try
-                {
-                TreeItemExtended<String> expanded= (TreeItemExtended<String>) e.getSource();
-                if(!expanded.isLeaf()) {
+                public void handle(Event e) {
+                    try {
+                        TreeItemExtended<String> expanded = (TreeItemExtended<String>) e.getSource();
+                        if (!expanded.isLeaf()) {
 
-                    if ((expanded!=serverFiles.getRoot()) && (expanded.getParent() == activeNode)) {
-                        expanded.getChildren().removeAll();
-                            listServerFiles(expanded);
-                            connection.command = "CWD";
-                            connection.argument ="/"+  getDir(expanded) + expanded.getValue();
-                        System.out.println("TERAZ: "+connection.argument);
-                        Thread thread = new Thread(connection);
-                        thread.start();
+                            if ((expanded != serverFiles.getRoot()) && (expanded.getParent() == activeNode)) {
+                                expanded.getChildren().removeAll();
+                                listServerFiles(expanded);
+                                connection.command = "CWD";
+                                connection.argument = "/" + getDir(expanded) + expanded.getValue();
+                                System.out.println("TERAZ: " + connection.argument);
+                                Thread thread = new Thread(connection);
+                                thread.start();
 
-                        thread.join();
-                            activeNode=expanded;
-                            RemotePath.setText(connection.argument+"/");
+                                thread.join();
+                                activeNode = expanded;
+                                RemotePath.setText(connection.argument + "/");
 
 
+                            } else if (expanded != serverFiles.getRoot()) {
+                                connection.command = "CWD";
+
+                                connection.argument = "/" + getDir(expanded);
+                                System.out.println("Sciezka: " + connection.argument);
+                                RemotePath.setText(connection.argument + expanded.getValue() + "/");
+                                Thread thread = new Thread(connection);
+                                thread.start();
+
+                                thread.join();
+                                //activeNode = (TreeItemExtended) expanded.getParent();
+                                System.out.println(activeNode);
+                                listServerFiles(expanded);
+                                connection.command = "CWD";
+                                connection.argument = expanded.getValue().toString();
+                                thread = new Thread(connection);
+                                thread.start();
+                                thread.join();
+                                activeNode = expanded;
+
+
+                            } else if (expanded == serverFiles.getRoot()) {
+                                connection.command = "CWD";
+                                connection.argument = "";
+                                Thread thread = new Thread(connection);
+                                thread.start();
+                                thread.join();
+                                activeNode = expanded;
+                                System.out.println(activeNode);
+                                listServerFiles(expanded);
+                                RemotePath.setText("/");
+
+
+                            }
+                        }
+
+                        System.out.println(expanded.getValue());
+
+                    } catch (InterruptedException e2) {
+                        //  e2.printStackTrace();
                     }
 
-
-                    else if (expanded != serverFiles.getRoot()) {
-                        connection.command = "CWD";
-
-                        connection.argument = "/" + getDir(expanded);
-                        System.out.println("Sciezka: " + connection.argument);
-                        RemotePath.setText(connection.argument+expanded.getValue()+"/");
-                        Thread thread = new Thread(connection);
-                        thread.start();
-
-                            thread.join();
-                            //activeNode = (TreeItemExtended) expanded.getParent();
-                            System.out.println(activeNode);
-                            listServerFiles(expanded);
-                        connection.command = "CWD";
-                        connection.argument = expanded.getValue().toString();
-                        thread = new Thread(connection);
-                        thread.start();
-                        thread.join();
-                        activeNode=expanded;
-
-
-
-                    } else if (expanded == serverFiles.getRoot()) {
-                        connection.command = "CWD";
-                        connection.argument = "";
-                        Thread thread = new Thread(connection);
-                        thread.start();
-                            thread.join();
-                            activeNode = expanded;
-                            System.out.println(activeNode);
-                            listServerFiles(expanded);
-                            RemotePath.setText("/");
-
-
-                    }
                 }
-
-                    System.out.println(expanded.getValue());
-
-                }
-                catch (InterruptedException e2)
-                {
-                  //  e2.printStackTrace();
-                }
-
-            }
-        });
+            });
 
 
+        }
+
+        catch (IOException e1)
+        {
+            System.out.println("Brak polaczenia");
+        }
+        catch (InterruptedException e2)
+        {
+            System.out.println("Błąd systemu");
+        }
     }
 
 
 
+    public void validate() throws IOException {
+        if(connection.message =="ERROR")
+        {
+            throw new IOException();
+        }
+    }
     public void removeServerDir() throws InterruptedException {
         String dir = RemotePath.getText();
         System.out.println(dir);
@@ -209,11 +209,12 @@ public class MainScene {
         chooseTransferMode();
         transferConnection.fileToDownload = selectedRemoteFile;
         transferConnection.command="RETR";
-        transferConnection.argument=LocalPath.getText();
-        transferConnection.destinationFolder = destinationFolder;
+        transferConnection.argument=fileName.getText();
+        transferConnection.destinationFolder = destinationFolder.getValue().toString();
         Thread thread = new Thread(transferConnection);
         thread.start();
         thread.join();
+        listFolder(destinationFolder);
 
 
     }
@@ -241,7 +242,7 @@ public class MainScene {
 
     }
 
-    public void establishTrasnferConnection() throws InterruptedException {
+    public void establishTrasnferConnection() throws InterruptedException, IOException {
         //String port = passiveModePort();
         passiveModePort();
         String port = "10002";
@@ -317,30 +318,45 @@ public class MainScene {
 
             public void handle(Event e) {
                 TreeItem<File> expanded= (TreeItem<File>) e.getSource();
-                if(!expanded.isLeaf())
-                {
-                    LocalPath.setText(expanded.getValue().toString());
-                   if(expanded.getValue().toString()=="Local Computer")
-                    {
-
-                        LocalPath.setText("\\");
-                    }
-                    destinationFolder = expanded;
-
+                listFolder(expanded);
                 }
-                ObservableList<TreeItem<File>> files = expanded.getChildren();
+        });
 
-                for (TreeItem<File> f : files) {
-                    File[] listOfFiles = f.getValue().listFiles();
-                    if (listOfFiles != null) {
-                        for (File file : listOfFiles) {
-                            f.getChildren().add(new TreeItem<File>(file));
-                        }
+    }
+
+    public void listFolder(TreeItem<File> expanded)
+    {
+        if(!expanded.isLeaf())
+        {
+            LocalPath.setText(expanded.getValue().toString());
+            if(expanded.getValue().toString()=="Local Computer")
+            {
+                LocalPath.setText("\\");
+            }
+            else {
+                expanded.getChildren().removeAll();
+                expanded.getChildren().clear();
+                File listOfFiles[] = expanded.getValue().listFiles();
+                if (listOfFiles != null) {
+                    for (File file2 : listOfFiles) {
+                        expanded.getChildren().add(new TreeItem<File>(file2));
                     }
                 }
             }
-        });
+            for(TreeItem<File> f : expanded.getChildren())
+            {
+                f.getChildren().removeAll();
+                f.getChildren().clear();
+                File listOfFiles2[] = f.getValue().listFiles();
+                if (listOfFiles2 != null) {
+                    for (File file2 : listOfFiles2) {
+                        f.getChildren().add(new TreeItem<File>(file2));
+                    }
+                }
 
+            }
+            destinationFolder = expanded;
+        }
     }
 
     private void getDirectory()  {

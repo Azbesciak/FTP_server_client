@@ -1,6 +1,7 @@
 package sample;
 
 import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
@@ -29,8 +30,8 @@ public class Connection implements  Runnable {
     public String argument;
     public TreeItem<File> fileToUpload;
     public Socket mainSocket;
-    public TreeItem fileToDownload;
-    public TreeItem destinationFolder;
+    public TreeItemExtended fileToDownload;
+    public String destinationFolder;
 
     public Connection(String addr,String port)
     {
@@ -38,7 +39,7 @@ public class Connection implements  Runnable {
         this.port=Integer.valueOf(port);
     }
     @Override
-    public void run() {
+    public void run()    {
 
 
         try {
@@ -48,7 +49,6 @@ public class Connection implements  Runnable {
             }
             if(command=="LIST")
             {
-                System.out.println("LIST "+argument);
                 message=list();
             }
 
@@ -79,81 +79,28 @@ public class Connection implements  Runnable {
             }
             if(command=="RETR")
             {
-                retr(fileToDownload);
+
+                retrPom(fileToDownload);
             }
 
 
 //
         } catch (Exception e) {
 
-            System.out.println(e.getMessage());
+            message="ERROR";
         }
     }
 
-//            while (keepAlive) {
-//                if (in.available() > 0) {
-//                    boolean binaryMode = false;
-//                   // BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-//
-//                    //String serverMessage = reader.readLine();
-//                    //  System.out.println("bytes received " + in.available());
-//                    //  System.out.println("data received " + serverMessage);
-//
-//
-//                    Arrays.fill(buff, (byte) 0);
-//                    in.read(buff);
-//
-//                    if (buff[0] == (byte) -1) {
-//                        System.out.println("Server aborted connection");
-//                        keepAlive = false;
-//                        continue;
-//                    }
-//
-//                    if ((int)buff[0] == 0)
-//                    {
-//                        System.out.println("Saving stream");
-//                        stream.write(buff);
-//                        break;
-//                    }
-//
-//                    System.out.println("Received data: " + new String(buff, StandardCharsets.UTF_8));
-//
-//
-//                }
-//                sleep(10);
-//            }
-//
-//            stream.close();
-//            client.close();
-//
-//        } catch (IOException e) {
-//            System.out.println("Brak połączenia");
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
-//
-//
-//        try {
-//
-//        } catch (RuntimeException e) {
-//            System.out.println(e.getMessage());
-//        }
 
+    public void connect () throws IOException {
 
-    public void connect ()   {
-        try {
             client = new Socket(addr, port);
             out = client.getOutputStream();
             in = client.getInputStream();
             writer = new PrintWriter(out, true);
             reader = new BufferedReader(new InputStreamReader(in));
         }
-        catch (IOException e)
-        {
-            System.out.println(e.getMessage());
 
-        }
-    }
 
     public String list() throws IOException {
         String serverMessage="";
@@ -268,35 +215,59 @@ public class Connection implements  Runnable {
 
     }
 
-    public void retr(TreeItem<String> f) throws IOException {
-        out = mainSocket.getOutputStream();
-        in = mainSocket.getInputStream();
-        writer = new PrintWriter(out, true);
-        reader = new BufferedReader(new InputStreamReader(in));
+    public void retr(TreeItemExtended<String> f) throws IOException {
+
         if(f.getChildren().size()!=0)
         {
-            File folder = new File(destinationFolder+getFileName(f));
+            //jeśli pobieramy folder to utwórz lokalnie folder o takiej samej nazwie
+            File folder = new File(destinationFolder+"\\"+getFileName(f));
             folder.mkdir();
-            destinationFolder.setValue(folder);
-            if(f.getChildren()==null)
-            {
+            destinationFolder=folder.getAbsolutePath();
+            //wejdź do niego a następnie przeszukaj dzieci na serwerze
                 argument = getFileName(f);
-                String input = list();
-                String k ="";
-                k+=(char)3;
-                String[] files = input.split(k);
+            String input = list();
+                if(input.length()>2)
+            {
+                String k = "";
+                k += (char) 3;
+               String files[] = input.split(k);
 
-                for (String file : files)
-                {
+                f.getChildren().removeAll();
+                f.getChildren().clear();
+
+                for (String file : files) {
                     TreeItemExtended<String> treeNode = new TreeItemExtended<>(file);
                     f.getChildren().add(treeNode);
                 }
             }
+                argument = f.getValue().toString();
+                cwd();
 
-            for(TreeItem file: f.getChildren())
+
+
+            //wywołaj metodę dla wszystkich dzieci
+            ObservableList<TreeItemExtended> l = f.getChildren();
+
+            for(TreeItemExtended<String> file: l)
             {
-                retr(file);
+                if(file.getValue()!=null) {
+                    retr(file);
+                }
             }
+
+            //po przetworzeniu całego folderu wejdź poziom wyżej
+            destinationFolder=(getParentDir(destinationFolder));
+            pwd();
+            String pom[] = message.split("/");
+            String dir="";
+            for(int i=0;i<pom.length-1;i++)
+            {
+                dir+=pom[i]+"/";
+            }
+            argument = "/";
+            cwd();
+            argument = dir;
+            cwd();
 
 
         }
@@ -309,27 +280,57 @@ public class Connection implements  Runnable {
             command = "RETR " + getFileName(f);
             writer.println(command);
             message = reader.readLine();
-            String path = destinationFolder.getValue().toString()+getFileName(f);
+            String size = f.getSize();
+            boolean emptyFile=false;
+            //jeśli plik jest pusty lub nie udało się odczytać rozmiaru ustaw domyślny rozmiar
+            if(Integer.valueOf(size )==0)
+            {
+                size="128";
+                emptyFile=true;
+            }
+            String path = destinationFolder+"\\"+getFileName(f);
             File downloadFile = new File(path);
             OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(downloadFile));
             InputStream is = client.getInputStream();
-            byte[] buffer = new byte[1];
-            int bytesRead = -1;
 
-            while ((bytesRead = is.read(buffer)) != -1) {
-                outputStream.write(buffer);
+            byte [] mybytearray  = new byte [Integer.valueOf(size)+128];
+            int bytesRead = is.read(mybytearray,0,mybytearray.length);
+            int current=0;
+            current = bytesRead;
+
+            do {
+                bytesRead =
+                        is.read(mybytearray, current, (mybytearray.length-current));
+                if(bytesRead >= 0) current += bytesRead;
+            } while(bytesRead > -1);
+
+            if(emptyFile==false) {
+                outputStream.write(mybytearray, 0, current);
             }
+            outputStream.flush();
+
 
             outputStream.close();
             is.close();
             message = reader.readLine();
         }
         }
+    public void retrPom(TreeItemExtended t) throws IOException {
+        out = mainSocket.getOutputStream();
+        in = mainSocket.getInputStream();
+        writer = new PrintWriter(out, true);
+        reader = new BufferedReader(new InputStreamReader(in));
+        String pom[] = argument.split("/");
+        String dir="";
+        for(int i=0;i<pom.length-1;i++)
+        {
+            dir+=pom[i]+"/";
+        }
+        argument = dir;
+        cwd();
+        retr(t);
 
-
-
-//        destinationFolder.getChildren().removeAll();
-//        destinationFolder.getChildren().clear();
+    }
 
 
 
@@ -342,6 +343,18 @@ public class Connection implements  Runnable {
         return name;
     }
 
+    public String getParentDir(String file)
+    {
+        String path= file.replace("\\","/");
+        System.out.println("aa");
+        String pom[]=path.split("/");
+        String dir="";
+        for(int i=0;i<pom.length-1;i++)
+        {
+            dir+=pom[i]+"\\";
+        }
+        return dir;
+    }
 }
 
 
