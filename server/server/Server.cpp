@@ -199,6 +199,21 @@ void parseCommand(string command) {
     } else if (command.find("quit") != string::npos || command.find("quit") != string::npos) {
         cout << GREEN_TEXT("Zamykanie serwera.\n");
         runserver = 0;
+    } else if (command.find("list") != string::npos) {
+        int iter = 1;
+        for (auto const &value: clients) {
+            if (value.socketDescriptor > 0) {
+                char remoteAddr[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &(value.IPv4Data->sin_addr), remoteAddr, INET_ADDRSTRLEN);
+
+                cout << iter++ << ". Klient, socket deskryptor: " << value.socketDescriptor
+                     << ", IP:" << remoteAddr << endl;
+            }
+        }
+        if (iter == 1) {
+            cout << RED_TEXT("Brak klientów") << endl;
+        }
+
     } else {
         cout << RED_TEXT("Brak zdefiniowanej funkcji dla ") << WHITE_TEXT(command) << "\n";
     }
