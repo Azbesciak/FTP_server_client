@@ -14,4 +14,6 @@
 
 #define DEFAULT_INTERFACE "eth0"
 
+#define MAX_THREADS 10
+
 #endif //SERVER_SERVERCONFIG_H

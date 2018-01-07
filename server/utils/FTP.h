@@ -7,17 +7,22 @@
 #include <map>
 #include <vector>
 #include <string>
+#include "Client.h"
+
 using namespace std;
 
 class FTP {
 public:
     FTP();
     explicit FTP(int socket);   //always use to proper initialization
+    FTP(Client *client);
+    ~FTP();
     void parseCommand(string command);
     void parseCommand(char * command);
     void sendResponse(string message);
     void killDataConnectionThreads();
 private:
+    Client *clientData;
     vector<string> splitCommand(string command);
     string toUpper(string data);
 
@@ -38,7 +43,7 @@ private:
 
     //A = ASCII
     //I = Binary
-    char transferType = 0;
+    char transferType = 'A';
 
     string currentDirectory;
     string getDirectoryWithSpaces(vector<string> command);
@@ -82,7 +87,7 @@ private:
     static void* newUploadThreadWrapper(void *object);
     static void *newDownloadThreadWrapper(void *object);
 
-    void prepareFileToDownload();
+    void prepareFileToTransfer(string *file);
 
     void setUpSocketForDataConnection();
 };

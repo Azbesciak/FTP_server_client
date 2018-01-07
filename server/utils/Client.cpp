@@ -5,7 +5,6 @@
 #include "Client.h"
 
 Client::~Client() {
-    delete IPv4Data;
 }
 
 Client::Client() {

@@ -37,6 +37,15 @@ FTP::FTP(int socket) : socketDescriptor(socket) {
     dataConnectionOpened = false;
 }
 
+FTP::FTP(Client *client) {
+    clientData = client;
+}
+
+FTP::~FTP() {
+    killDataConnectionThreads();
+    delete clientData;
+}
+
 string FTP::toUpper(string data) {
     std::transform(data.begin(), data.end(), data.begin(), ::toupper);
     return data;
@@ -116,7 +125,7 @@ void FTP::parseCommand(string command) {
 
 void FTP::sendResponse(string message) {
     message += "\r\n";
-    cout << "\t" << MAGENTA_TEXT("odpowiedź do " << socket << ":\t") << GREEN_TEXT(message);
+    cout << "\t" << MAGENTA_TEXT("odpowiedź do " << socketDescriptor << ":\t") << GREEN_TEXT(message);
     write(socketDescriptor, message.c_str(), message.size());
 }
 
@@ -125,8 +134,13 @@ void FTP::putFile(string filename) {
     if (dataConnectionPort == 0) {
         throw ServerException("500 Send PASSV.");
     }
-    throw ServerException("500 Niezaimplementowana komenda.");
+    if (!downloadThreadActive) {
+        createThread(ThreadType::Upload);
+    }
 
+    //TODO mutex
+    sendResponse("226 Połączenie otwarte.");
+    fileToUpload = filename;
 }
 
 void FTP::getFile(string filename) {
@@ -138,11 +152,8 @@ void FTP::getFile(string filename) {
     }
 
     //TODO mutex
-
+    sendResponse("226 Połączenie otwarte.");
     fileToDownload = filename;
-
-
-    //send 226 reply after sending data
 }
 
 //directory methods
@@ -446,49 +457,75 @@ void *FTP::uploadThread(void *args) {
     //wait for connection from client
     cout << "Oczekiwanie na połączenie na porcie " << dataConnectionPort << endl;
     socklen_t sockSize = sizeof(struct sockaddr);
-    int connection_descriptor = accept(socketDescriptor, (struct sockaddr *) &remote, &sockSize);
+    int connection_descriptor = accept(dataConnectionSocket, (struct sockaddr *) &remote, &sockSize);
     if (connection_descriptor < 0) {
         perror("Client accepting error");
-        dataConnectionOpened = 0;
     }
 
     //zapisnie adresu
     char remoteAddr[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
 #if DEBUG
-    cout << "Upload thread: Podłączono klienta z adresem" << remoteAddr << "Przypisany deskryptor"
+    cout << "Upload thread: Podłączono klienta z adresem " << remoteAddr << ". Przypisany deskryptor"
          << connection_descriptor << endl;
 #endif
 
+    prepareFileToTransfer(&fileToUpload);
+    unsigned int filesize = Directory::getSize(fileToUpload);
+#if DEBUG
+    cout << "Upload thread: Wielkość pliku do wysłania " << filesize << endl;
+#endif
     fstream file;
     if (transferType == 'A') {
-        file.open(fileToUpload, ios::out);
+        file.open(fileToUpload, ios::in);
     } else {
-        file.open(fileToUpload, ios::out | ios::binary);
+        file.open(fileToUpload, ios::in | ios::binary);
     }
+    if (!file.is_open()) {
+        sendResponse("500 Nie znaleziono pliku do wysłania.");
+    } else {
 #if DEBUG
-    cout << "Upload thread: Przygotowywanie pliku do wyslania " << fileToUpload << endl;
+        cout << "Upload thread: Przygotowywanie pliku do wyslania " << fileToUpload
+             << "Wysylanie w trybie " << transferType << endl;
 #endif
-    bool connectionOpened = true;
+        bool connectionOpened = true;
 
-    //buffer for data
-    auto *buffer = new char[BUFFER_SIZE];
+        //buffer for data
+        auto *buffer = new char[BUFFER_SIZE];
 
-    while (connectionOpened) {
-        //while there are not sent bits...
-        connectionOpened = false;
-        cout << "Data sent" << endl;
+        while (connectionOpened) {
+            //while there are not sent bits...
+            while (!file.eof()) {
+                if (transferType == 'A') {
+                    string line;
+                    getline(file, line);
+                    write(connection_descriptor, line.c_str(), line.size());
+                } else {
+                    //binary data
+                    memset(buffer, 0, BUFFER_SIZE);
+                    file.read(buffer, BUFFER_SIZE);
+                    std::streamsize bytesRead = file.gcount();
+                    write(connection_descriptor, buffer, bytesRead);
+                }
+            }
+            connectionOpened = false;
+            cout << "Data sent" << endl;
+        }
+        file.flush();
+        file.close();
     }
-
-    file.close();
+    sendResponse("226 Plik wysłany.");
 
     //TODO mutex on socket descriptor
     if (!downloadThreadActive) {
         //close socket only when data is not being downloaded
-        if (dataConnectionSocket == 0) {
-            close(dataConnectionSocket);
-            dataConnectionOpened = false;
-        }
+
+        //close(dataConnectionSocket);
+        close(connection_descriptor);
+#if DEBUG
+        cout << "Upload thread. Data connection closed - socekt " << connection_descriptor << endl;
+#endif
+
     }
 
     uploadThreadActive = false;
@@ -510,7 +547,7 @@ void *FTP::downloadThread(void *args) {
         cout << "Download thread, client " << socketDescriptor << " accepting error.\n";
 #endif
         perror("Download thread.Client accepting error");
-        dataConnectionOpened = 0;
+        //;
     }
 
     //zapisnie adresu
@@ -522,7 +559,7 @@ void *FTP::downloadThread(void *args) {
 #endif
 
     //add current directory
-    prepareFileToDownload();
+    prepareFileToTransfer(&fileToDownload);
 
     fstream file;
     if (transferType == 'A') {
@@ -531,20 +568,17 @@ void *FTP::downloadThread(void *args) {
         file.open(fileToDownload, ios::out | ios::binary);
     }
 #if DEBUG
-    cout << "Download thread: Tworzenie pliku " << fileToUpload << endl;
+    cout << "Download thread: Tworzenie pliku " << fileToDownload << endl;
 #endif
     bool connectionOpened = true;
 
     //buffer for data
     auto *buffer = new char[BUFFER_SIZE];
-
     while (connectionOpened) {
         memset(buffer, 0, BUFFER_SIZE);
-        ssize_t value = read(dataConnectionSocket, buffer, BUFFER_SIZE);
-        if(value > -1)
-        {
+        ssize_t value = read(connection_descriptor, buffer, BUFFER_SIZE);
+        if (value > -1) {
             if (value == 0) {
-                file.write(buffer, value - 1);
                 connectionOpened = false;
                 continue;
             } else {
@@ -552,18 +586,22 @@ void *FTP::downloadThread(void *args) {
             }
         }
     }
-
+    file.flush();
     file.close();
 #if DEBUG
-    cout << "Download thread: Plik zapisany " << fileToUpload << endl;
+    cout << "Download thread: Plik zapisany " << fileToDownload << endl;
 #endif
+    sendResponse("226 Plik odebrany.");
     //TODO mutex on socket descriptor
     if (!uploadThreadActive) {
-        //close socket only when data is not being downloaded
-        if (dataConnectionSocket == 0) {
-            close(dataConnectionSocket);
-            dataConnectionOpened = false;
-        }
+        //close socket only when data is not being uploaded
+        //close(dataConnectionSocket);
+        //close socket from client
+        close(connection_descriptor);
+#if DEBUG
+        cout << "Download thread. Data connection closed - socekt " << connection_descriptor << endl;
+#endif
+
     }
 
     downloadThreadActive = false;
@@ -583,23 +621,25 @@ void *FTP::newDownloadThreadWrapper(void *object) {
  * Removes slash at the beginning.
  * Adds current directory position.
  */
-void FTP::prepareFileToDownload() {
+void FTP::prepareFileToTransfer(string *file) {
     //TODO mutex on fileToUpload
-    Directory::slashesConverter(&fileToDownload);
+    Directory::slashesConverter(file);
     //remove slash at 0 position
-    if (fileToDownload[0] == '/') {
-        fileToDownload.erase(fileToDownload.size() - 1, 1);
+    if ((*file)[0] == '/') {
+        file->erase(file->size() - 1, 1);
     }
 
     //add current directory
-    fileToDownload = currentDirectory + fileToDownload;
+    *file = Directory::getRootDir() + (currentDirectory == "/" ? "" : currentDirectory) + *file;
 }
 
 //initiate socket for dataconnection
 void FTP::setUpSocketForDataConnection() {
     //open new socket for the connection
     struct sockaddr_in sockAddr;
-
+#if DEBUG
+    cout << "Setting up socket for data connection\n";
+#endif
     dataConnectionSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (dataConnectionSocket < 0) {
         printf("Client data connection socket. Socket error\n");
@@ -623,7 +663,8 @@ void FTP::setUpSocketForDataConnection() {
         throw ServerException("500 Internal server exception. Listen.");
     }
 #if DEBUG
-    cout << "Client " << socketDescriptor << " socket for data connection initialized. Port " << dataConnectionPort << " binded.\n";
+    cout << "Client " << socketDescriptor << " socket for data connection initialized. Port " << dataConnectionPort
+         << " binded.\n";
 #endif
     dataConnectionOpened = true;
 }
@@ -635,14 +676,14 @@ void FTP::killDataConnectionThreads() {
 
     if (uploadThreadHandle != 0) {
 #if DEBUG
-        cout << "Client " << socketDescriptor << " upload thread killed"<< endl;
+        cout << "Client " << socketDescriptor << " upload thread killed" << endl;
 #endif
         pthread_cancel(uploadThreadHandle);
     }
 
     if (uploadThreadHandle != 0) {
 #if DEBUG
-        cout << "Client " << socketDescriptor << " download thread killed"<< endl;
+        cout << "Client " << socketDescriptor << " download thread killed" << endl;
 #endif
         pthread_cancel(downloadThreadActive);
     }
