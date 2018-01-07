@@ -70,6 +70,11 @@ public class Connection implements  Runnable {
             {
                 setTransmissionMode();
             }
+            if(command=="STOR")
+            {
+                stor(fileToUpload);
+            }
+
 //
         } catch (Exception e) {
             System.out.println("Brak połączenia");
@@ -225,14 +230,15 @@ public class Connection implements  Runnable {
         {
             command = "STOR " + getFileName(f);
             writer.println(command);
-            message = reader.readLine();
+          //  message = reader.readLine();
             DataOutputStream dos = new DataOutputStream(client.getOutputStream());
             FileInputStream fis = new FileInputStream(f.getValue());
             byte[] buffer = new byte[4096];
             while (fis.read(buffer) > 0) {
                 dos.write(buffer);
             }
-            dos.write(-1);
+            client.getOutputStream().close();
+            client.getInputStream().close();
             fis.close();
             dos.close();
         }
@@ -241,7 +247,9 @@ public class Connection implements  Runnable {
 
     public String getFileName(TreeItem file)
     {
-        String pom[]=file.getValue().toString().split("/");
+        String path= file.getValue().toString().replace("\\","/");
+        System.out.println("aa");
+        String pom[]=path.split("/");
         String name = pom[pom.length-1];
         return name;
     }

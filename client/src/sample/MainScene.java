@@ -183,31 +183,37 @@ public class MainScene {
     }
 
     public void upload() throws InterruptedException, IOException {
-        String port = passiveModePort();
+        //String port = passiveModePort();
+        passiveModePort();
+        String port = "10002";
         String addr = connection.addr;
         Connection uploadConnection = new Connection(addr,port);
         uploadConnection.mainSocket = connection.client;
         uploadConnection.connect();
-//        uploadConnection.command="MODE";
-//        uploadConnection.argument=group.getSelectedToggle().getUserData().toString();
-//        uploadConnection.setTransmissionMode();
-//        uploadConnection.fileToUpload = selectedLocalFile;
+        connection.command="MODE";
+        connection.argument=group.getSelectedToggle().getUserData().toString();
+        connection.setTransmissionMode();
+        uploadConnection.fileToUpload = selectedLocalFile;
+        uploadConnection.command="STOR";
+        Thread thread = new Thread(uploadConnection);
+        thread.start();
+        thread.join();
     }
 
 
 
 
-    public String passiveModePort() throws InterruptedException {
+    public void passiveModePort() throws InterruptedException {
         connection.command="PASV";
         Thread thread = new Thread(connection);
         thread.start();
         thread.join();
-        String input[] = connection.message.split(" ");
-        String pom[] = input[1].split(",");
-        Integer p1= Integer.valueOf(pom[0]);
-        Integer p2= Integer.valueOf(pom[1].substring(0,pom[1].length()-1));
-        Integer port = p1*256+p2;
-        return port.toString();
+//        String input[] = connection.message.split(" ");
+//        String pom[] = input[1].split(",");
+//        Integer p1= Integer.valueOf(pom[0]);
+//        Integer p2= Integer.valueOf(pom[1].substring(0,pom[1].length()-1));
+//        Integer port = p1*256+p2;
+       // return port.toString();
 
     }
     private TreeItemExtended<String> initServerFiles(String input)
