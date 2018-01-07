@@ -471,7 +471,9 @@ void *FTP::uploadThread(void *args) {
     }
 
     //wait for connection from client
+#if DEBUG
     cout << "Oczekiwanie na połączenie na porcie " << dataConnectionPort << endl;
+#endif
     socklen_t sockSize = sizeof(struct sockaddr);
     int connection_descriptor = accept(dataConnectionSocket, (struct sockaddr *) &remote, &sockSize);
     if (connection_descriptor < 0) {
@@ -586,7 +588,9 @@ void *FTP::downloadThread(void *args) {
     }
 
     //wait for connection from client
+#if DEBUG
     cout << "Oczekiwanie na połączenie na porcie " << dataConnectionPort << endl;
+#endif
     socklen_t sockSize = sizeof(struct sockaddr);
     int connection_descriptor = accept(dataConnectionSocket, (struct sockaddr *) &remote, &sockSize);
     if (connection_descriptor < 0) {

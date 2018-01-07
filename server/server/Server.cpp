@@ -1,25 +1,6 @@
 #include "Server.h"
 #include "ServerConfig.h"
 
-/*
-	RFC
-	https://tools.ietf.org/html/rfc959
-	http://www.cs.put.poznan.pl/mboron/prez/zasady_projektow.pdf
-
-	Methods to implement:
-		ascii
-		binary
-		mkdir
-		rmdir
-		put
-		get
-
-	Dopisać odbieranie i wysyłanie danych - binarnie i tekstowo.
-	Dekodowanie poleceń ( + obsługa nieznanych poleceń - do tego też odpowiednia odpowiedź dla klienta) i formułowanie odpowiedzi.
-
-    sprawdzić dlaczego find zawsze znajduje MKD
-
-*/
 int runserver = 1;
 Client clients[MAX_THREADS + 1];
 int currentClientNumber = 0;
@@ -117,6 +98,7 @@ void *startServer(void *serverOpts) {
             //dowidzenia
             string message = "500 Za dużo klientów.";
             write(connection_descriptor, message.c_str(), message.size());
+            close(connection_descriptor);
             continue;
         }
         handleConnection(connection_descriptor, &remote);
