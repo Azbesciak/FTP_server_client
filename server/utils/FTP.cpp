@@ -132,20 +132,25 @@ void FTP::sendResponse(string message) {
 
 void FTP::putFile(string filename) {
     if (dataConnectionPort == 0) {
-        throw ServerException("500 Send PASSV.");
+        throw ServerException("500 Send PASV.");
     }
     if (!downloadThreadActive) {
         createThread(ThreadType::Upload);
     }
 
-    //TODO mutex
     sendResponse("226 Połączenie otwarte.");
+    pthread_mutex_lock(&fileToUpload_mutex);
     fileToUpload = filename;
+    pthread_mutex_unlock(&fileToUpload_mutex);
+
+    pthread_mutex_lock(&tryToDownloadFile_mutex);
+    tryToUploadFile = true;
+    pthread_mutex_unlock(&tryToDownloadFile_mutex);
 }
 
 void FTP::getFile(string filename) {
     if (dataConnectionPort == 0) {
-        throw ServerException("500 Send PASSV.");
+        throw ServerException("500 Send PASV.");
     }
     if (!downloadThreadActive) {
         createThread(ThreadType::Download);
@@ -153,7 +158,14 @@ void FTP::getFile(string filename) {
 
     //TODO mutex
     sendResponse("226 Połączenie otwarte.");
+    pthread_mutex_lock(&fileToDownload_mutex);
     fileToDownload = filename;
+    pthread_mutex_unlock(&fileToDownload_mutex);
+
+    pthread_mutex_lock(&tryToDownloadFile_mutex);
+    tryToDownloadFile = true;
+    pthread_mutex_unlock(&tryToDownloadFile_mutex);
+
 }
 
 //directory methods
@@ -273,7 +285,6 @@ string FTP::getDirectoryWithSpaces(vector<string> command) {
  */
 void FTP::sendPASSVResponse() {
     //TODO mutex for socketDescriptor and activity flags
-    //TODO wyslac jakies gowno jezeli jest passv kiedy juz byl ustawiony
     if (uploadThreadActive || downloadThreadActive) {
         throw ServerException("500 0,0 Zmiana portu niemożliwa, port aktualnie w użyciu.");
     } else {
@@ -349,11 +360,14 @@ string FTP::getDefaultInterfaceAddr() {
 
 bool FTP::isPortReserved(uint16_t port) {
     //check in list with ports
+    pthread_mutex_lock(&dataConnectionPorts_mutex);
     for (auto const &value: dataConnectionPorts) {
         if (value == port) {
             return true;
         }
     }
+    pthread_mutex_unlock(&dataConnectionPorts_mutex);
+
 
     int sockfd;
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -394,10 +408,12 @@ string FTP::getRandomPort() {
     } while (isPortReserved(port));
 
     //add port to global ports
+    pthread_mutex_lock(&dataConnectionPorts_mutex);
     FTP::dataConnectionPorts.push_back(port);
     //set port in this instance
-    dataConnectionPort = DEFAULT_DATACONNECTION_PORT;
+    pthread_mutex_unlock(&dataConnectionPorts_mutex);
 
+    dataConnectionPort = DEFAULT_DATACONNECTION_PORT;
 
     string portStr;
     auto *temp = new char[20];
@@ -443,8 +459,8 @@ int FTP::createThread(ThreadType threadType) {
 //TODO mutexex
 /*
  * Mutex:
- *      initialization -> when connection is not open
- *      before file creation and when opening file
+ *      initialization -> when connection is not open   ->
+ *      before file creation and when opening file  -> done
  */
 void *FTP::uploadThread(void *args) {
 
@@ -461,6 +477,22 @@ void *FTP::uploadThread(void *args) {
     if (connection_descriptor < 0) {
         perror("Client accepting error");
     }
+    //zabezpieczenie w przypadku, gdy najpierw klient sie podlacza a nastepnie wysyla stor
+    //wowczas nazwa pliku moze byc niepoprawna.
+    pthread_mutex_lock(&tryToUploadFile_mutex);
+    bool canDownload = tryToUploadFile;
+    pthread_mutex_unlock(&tryToUploadFile_mutex);
+
+    while(!canDownload)
+    {
+        usleep(100000); //wait 500ms
+        pthread_mutex_lock(&tryToUploadFile_mutex);
+        canDownload = tryToUploadFile;
+        pthread_mutex_unlock(&tryToUploadFile_mutex);
+    }
+    pthread_mutex_lock(&tryToUploadFile_mutex);
+    tryToUploadFile = false;
+    pthread_mutex_unlock(&tryToUploadFile_mutex);
 
     //zapisnie adresu
     char remoteAddr[INET_ADDRSTRLEN];
@@ -470,7 +502,10 @@ void *FTP::uploadThread(void *args) {
          << connection_descriptor << endl;
 #endif
 
+    pthread_mutex_lock(&fileToUpload_mutex);
+
     prepareFileToTransfer(&fileToUpload);
+    string fileToUpload_localCopy = fileToUpload;
     unsigned int filesize = Directory::getSize(fileToUpload);
 #if DEBUG
     cout << "Upload thread: Wielkość pliku do wysłania " << filesize << endl;
@@ -481,54 +516,62 @@ void *FTP::uploadThread(void *args) {
     } else {
         file.open(fileToUpload, ios::in | ios::binary);
     }
+    pthread_mutex_unlock(&fileToUpload_mutex);
+    int bytesSend = 0;
+
     if (!file.is_open()) {
         sendResponse("500 Nie znaleziono pliku do wysłania.");
     } else {
 #if DEBUG
-        cout << "Upload thread: Przygotowywanie pliku do wyslania " << fileToUpload
+        cout << "Upload thread: Przygotowywanie pliku do wyslania " << fileToUpload_localCopy
              << "Wysylanie w trybie " << transferType << endl;
 #endif
         bool connectionOpened = true;
 
         //buffer for data
         auto *buffer = new char[BUFFER_SIZE];
-
         while (connectionOpened) {
-            //while there are not sent bits...
             while (!file.eof()) {
                 if (transferType == 'A') {
                     string line;
                     getline(file, line);
+
+                    std::streamsize bytesRead = file.gcount();
+                    bytesSend += bytesRead;
                     write(connection_descriptor, line.c_str(), line.size());
                 } else {
                     //binary data
                     memset(buffer, 0, BUFFER_SIZE);
                     file.read(buffer, BUFFER_SIZE);
                     std::streamsize bytesRead = file.gcount();
+                    bytesSend += bytesRead;
                     write(connection_descriptor, buffer, bytesRead);
                 }
             }
             connectionOpened = false;
-            cout << "Data sent" << endl;
         }
         file.flush();
         file.close();
     }
+
+#if DEBUG
+    cout << "Upload thread: Plik wysłany " << fileToUpload_localCopy
+         << ". Wysłano "  << bytesSend << " bajtów."<<endl;
+#endif
     sendResponse("226 Plik wysłany.");
 
-    //TODO mutex on socket descriptor
     if (!downloadThreadActive) {
         //close socket only when data is not being downloaded
-
+        //don't close dataConnectionSocket not to allow another app to reserve out port to data connection
         //close(dataConnectionSocket);
         close(connection_descriptor);
 #if DEBUG
-        cout << "Upload thread. Data connection closed - socekt " << connection_descriptor << endl;
+        cout << "Upload thread. Data connection closed - socket " << connection_descriptor << endl;
 #endif
 
     }
-
     uploadThreadActive = false;
+    pthread_exit(nullptr);
 }
 
 void *FTP::downloadThread(void *args) {
@@ -550,6 +593,23 @@ void *FTP::downloadThread(void *args) {
         //;
     }
 
+    //zabezpieczenie w przypadku, gdy najpierw klient sie podlacza a nastepnie wysyla stor
+    //wowczas nazwa pliku moze byc niepoprawna.
+    pthread_mutex_lock(&tryToDownloadFile_mutex);
+    bool canDownload = tryToDownloadFile;
+    pthread_mutex_unlock(&tryToDownloadFile_mutex);
+
+    while(!canDownload)
+    {
+        usleep(100000); //wait 500ms
+        pthread_mutex_lock(&tryToDownloadFile_mutex);
+        canDownload = tryToDownloadFile;
+        pthread_mutex_unlock(&tryToDownloadFile_mutex);
+    }
+    pthread_mutex_lock(&tryToDownloadFile_mutex);
+    tryToDownloadFile = false;
+    pthread_mutex_unlock(&tryToDownloadFile_mutex);
+
     //zapisnie adresu
     char remoteAddr[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
@@ -558,17 +618,23 @@ void *FTP::downloadThread(void *args) {
          << connection_descriptor << endl;
 #endif
 
+    pthread_mutex_lock(&fileToDownload_mutex);
     //add current directory
     prepareFileToTransfer(&fileToDownload);
 
+    //stwórz lokalną kopię, aby użytkownik ustawiający nowy stor nie spowodował,
+    //niespojnego komunikatu przed i po zapisie pliku
+    string fileToDownload_localCopy = fileToDownload;
     fstream file;
     if (transferType == 'A') {
         file.open(fileToDownload, ios::out);
     } else {
         file.open(fileToDownload, ios::out | ios::binary);
     }
+
+    pthread_mutex_unlock(&fileToDownload_mutex);
 #if DEBUG
-    cout << "Download thread: Tworzenie pliku " << fileToDownload << endl;
+    cout << "Download thread: Tworzenie pliku " << fileToDownload_localCopy << endl;    //poza mutexem powinnismy korzysatc z lokalnej kopii
 #endif
     bool connectionOpened = true;
 
@@ -589,7 +655,7 @@ void *FTP::downloadThread(void *args) {
     file.flush();
     file.close();
 #if DEBUG
-    cout << "Download thread: Plik zapisany " << fileToDownload << endl;
+    cout << "Download thread: Plik zapisany " << fileToDownload_localCopy << endl;
 #endif
     sendResponse("226 Plik odebrany.");
     //TODO mutex on socket descriptor
@@ -605,6 +671,7 @@ void *FTP::downloadThread(void *args) {
     }
 
     downloadThreadActive = false;
+    pthread_exit(nullptr);
 }
 
 void *FTP::newUploadThreadWrapper(void *object) {

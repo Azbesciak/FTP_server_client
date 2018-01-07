@@ -40,6 +40,10 @@ struct thread_data_t
     struct sockaddr_in *remote;
 };
 
+pthread_mutex_t currentClientNumber_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+
+
 void *startServer(void *server_opts);
 void *connection(void *t_data);
 void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remote);

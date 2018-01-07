@@ -20,7 +20,6 @@
     sprawdzić dlaczego find zawsze znajduje MKD
 
 */
-
 int runserver = 1;
 Client clients[MAX_THREADS + 1];
 int currentClientNumber = 0;
@@ -28,8 +27,8 @@ int currentClientNumber = 0;
 int main(int argc, char *argv[]) {
     string command;
 
-    char *serverAddr = argc == 3 ? argv[1] : (char *) DEFAULT_ADDR;
-    int port = argc == 2 ? atoi(argv[1]) : (argc == 3 ? atoi(argv[2]) : DEFAULT_PORT);
+    char *serverAddr = (char *) DEFAULT_ADDR;
+    int port = argc == 2 ? atoi(argv[1]) : DEFAULT_PORT;
 
     int serverThread = createServerThread(serverAddr, port);
 
@@ -157,7 +156,9 @@ void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remo
     }
 
     clients[currentClientNumber] = *newClient;
+    pthread_mutex_lock(&currentClientNumber_mutex);
     currentClientNumber++;
+    pthread_mutex_unlock(&currentClientNumber_mutex);
 }
 
 //funkcja opisującą zachowanie wątku - musi przyjmować argument typu (void *) i zwracać (void *)
@@ -200,6 +201,10 @@ void *connection(void *t_data) {
         memset(buffer, 0, BUFFER_SIZE);
     }
     delete ftpClient;
+    pthread_mutex_lock(&currentClientNumber_mutex);
+    currentClientNumber--;
+    pthread_mutex_unlock(&currentClientNumber_mutex);
+
     pthread_exit(NULL);
 }
 
