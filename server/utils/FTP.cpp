@@ -524,7 +524,7 @@ void *FTP::uploadThread(void *args) {
     } else {
 #if DEBUG
         cout << "Upload thread: Przygotowywanie pliku do wyslania " << fileToUpload_localCopy
-             << "Wysylanie w trybie " << transferType << endl;
+             << ". Wysylanie w trybie " << transferType << endl;
 #endif
         bool connectionOpened = true;
 
@@ -535,8 +535,12 @@ void *FTP::uploadThread(void *args) {
                 if (transferType == 'A') {
                     string line;
                     getline(file, line);
+                    int addNewLine = file.eof() ? 0 : 1;
 
-                    std::streamsize bytesRead = file.gcount();
+                    int bytesRead = line.size() + addNewLine;  //+1 == \n
+                    if(addNewLine == 1)
+                        line+='\n';
+
                     bytesSend += bytesRead;
                     write(connection_descriptor, line.c_str(), line.size());
                 } else {
@@ -614,7 +618,7 @@ void *FTP::downloadThread(void *args) {
     char remoteAddr[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(remote.sin_addr), remoteAddr, INET_ADDRSTRLEN);
 #if DEBUG
-    cout << "Download thread: Podłączono klienta z adresem" << remoteAddr << "Przypisany deskryptor"
+    cout << "Download thread: Podłączono klienta z adresem " << remoteAddr << ". Przypisany deskryptor"
          << connection_descriptor << endl;
 #endif
 
