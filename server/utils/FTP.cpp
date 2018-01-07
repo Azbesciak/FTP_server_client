@@ -536,7 +536,7 @@ void *FTP::downloadThread(void *args) {
         file.open(fileToDownload, ios::out | ios::binary);
     }
 #if DEBUG
-    cout << "Download thread: Tworzenie pliku " << fileToUpload << endl;
+    cout << "Download thread: Tworzenie pliku " << fileToDownload << endl;
 #endif
     bool connectionOpened = true;
 
@@ -558,8 +558,9 @@ void *FTP::downloadThread(void *args) {
 
     file.close();
 #if DEBUG
-    cout << "Download thread: Plik zapisany " << fileToUpload << endl;
+    cout << "Download thread: Plik zapisany " << fileToDownload << endl;
 #endif
+    sendResponse("226 Plik wysłany.");
     //TODO mutex on socket descriptor
     if (!uploadThreadActive) {
         //close socket only when data is not being downloaded
@@ -595,7 +596,7 @@ void FTP::prepareFileToDownload() {
     }
 
     //add current directory
-    fileToDownload = currentDirectory + fileToDownload;
+    fileToDownload = Directory::getRootDir() + (currentDirectory == "/" ? "" : currentDirectory) + fileToDownload;
 }
 
 //initiate socket for dataconnection
