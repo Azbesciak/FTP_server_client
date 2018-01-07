@@ -18,9 +18,8 @@ public:
     static string listFiles(string directory, string currentDirectory);
     static string changeDirectory(string directory, string currentDirectory);
 
-    static bool isFileExist(string filename);
+    static bool isFileExist(string file);
     static void slashesConverter(string *windowsSlashes);
-    static bool isFile(string filename);
     static unsigned int getSize(string fullname);
 
 private:

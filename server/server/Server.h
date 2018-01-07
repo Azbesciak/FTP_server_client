@@ -6,16 +6,16 @@
 
 
 //system includes
-#include <stdio.h>
+#include <cstdio>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-#include <time.h>
+#include <cstring>
+#include <cstdlib>
+#include <ctime>
 #include <pthread.h>
 #include <dirent.h>
 #include <iostream>
@@ -43,11 +43,9 @@ struct thread_data_t
 pthread_mutex_t currentClientNumber_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
-
 void *startServer(void *server_opts);
 void *connection(void *t_data);
 void handleConnection(int connection_socket_descriptor, struct sockaddr_in *remote);
 void parseCommand(string command);
 int createServerThread(char * addr, int port);
-void cleanRoutine(void *arg);
 void displayRequest(int socketDescriptor, char * request);

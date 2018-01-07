@@ -10,7 +10,7 @@
 #include <arpa/inet.h>
 
 //first method to display interface addr
-#include <string.h>
+#include <cstring>
 #include <sys/ioctl.h>
 #include <net/if.h> //IFNAMSIZ
 
@@ -28,7 +28,7 @@
 vector<uint16_t> FTP::dataConnectionPorts;
 
 FTP::FTP() {
-    throw new ServerException("Use FTP(int socket) instead.");
+    throw ServerException("Use FTP(int socket) instead.");
 }
 
 FTP::FTP(int socket) : socketDescriptor(socket) {
@@ -78,19 +78,19 @@ void FTP::parseCommand(string command) {
         if (splittedCommand.size() < 2) {
             throw ServerException("501 Brak oczekiwanego prametru.");
         }
-        string dirToCreate = getDirectoryWithSpaces(splittedCommand);
+        string dirToCreate = getStringWithSpaces(splittedCommand) + '/';
         makeDirectory(dirToCreate);
     } else if (splittedCommand[0].find("RMD") != string::npos) {
         if (splittedCommand.size() < 2) {
             throw ServerException("501 Brak oczekiwanego prametru.");
         }
-        string directoryToRemove = getDirectoryWithSpaces(splittedCommand);
+        string directoryToRemove = getStringWithSpaces(splittedCommand) + '/';
         removeDirectory(directoryToRemove);
     } else if (splittedCommand[0].find("LIST") != string::npos) {
         if (splittedCommand.size() < 2) {
             listFiles(currentDirectory);
         } else {
-            string directory = getDirectoryWithSpaces(splittedCommand);
+            string directory = getStringWithSpaces(splittedCommand) + '/';
             listFiles(directory);
         }
     } else if (splittedCommand[0].find("PWD") != string::npos) {
@@ -100,7 +100,7 @@ void FTP::parseCommand(string command) {
         if (splittedCommand.size() < 2) {
             changeDirectory("/");   //brak parametru, przejdz do glownego
         } else {
-            string directory = getDirectoryWithSpaces(splittedCommand);
+            string directory = getStringWithSpaces(splittedCommand) + '/';
             changeDirectory(directory);    //przejdz do wskazanego przez parametr
         }
     } else if (splittedCommand[0].find("PASV") != string::npos) {
@@ -110,13 +110,16 @@ void FTP::parseCommand(string command) {
         if (splittedCommand.size() < 2) {
             throw ServerException("501 Brak oczekiwanego prametru.");
         }
-        putFile(splittedCommand[1]);
+        string filename = getStringWithSpaces(splittedCommand);
+        putFile(filename);
     } else if (splittedCommand[0].find("STOR") != string::npos) {
         //wysylanie plikow od klineta na serwer
         if (splittedCommand.size() < 2) {
             throw ServerException("501 Brak oczekiwanego prametru.");
         }
-        getFile(splittedCommand[1]);
+        string filename = getStringWithSpaces(splittedCommand);
+        getFile(filename);
+
     } else {
         throw ServerException("500 Komenda nierozpoznana.");
     }
@@ -131,6 +134,10 @@ void FTP::sendResponse(string message) {
 
 
 void FTP::putFile(string filename) {
+    //test dla pliku w folderze glownym i podkatalogu ze wzgledu na currentDirectory string
+    if (!Directory::isFileExist(Directory::getRootDir() + currentDirectory + filename)) {
+        throw ServerException("550 Plik " + filename + " nie istnieje.");
+    }
     if (dataConnectionPort == 0) {
         throw ServerException("500 Send PASV.");
     }
@@ -253,7 +260,7 @@ vector<string> FTP::splitCommand(string command) {
 }
 
 //example /dir1/named/ dir/dir2,  "named/ dir" -> "named dir"
-string FTP::getDirectoryWithSpaces(vector<string> command) {
+string FTP::getStringWithSpaces(vector<string> command) {
     //at index 0 is command string
     size_t iter = 1;
     string directory = command[iter];
@@ -272,8 +279,10 @@ string FTP::getDirectoryWithSpaces(vector<string> command) {
         }
         iter++;
     }
-    if (directory[directory.size() - 1] != '/') {
-        directory += '/';
+
+    //usun slash na koncu, aby funkcja byla bardziej uniwersalna - dla folderow i plikow
+    if (directory[directory.size() - 1] == '/') {
+        directory.erase(directory.size() - 1, 1);
     }
     return directory;
 }
@@ -325,7 +334,7 @@ string FTP::getDefaultInterfaceAddr() {
     string interfaceName = getDefaultInterfaceName();
 
     int fd;
-    struct ifreq ifr;
+    struct ifreq ifr{};
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -349,7 +358,7 @@ string FTP::getDefaultInterfaceAddr() {
     string addr(inet_ntoa(((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr));
 
     size_t pos;
-    while ((pos = addr.find(".")) != string::npos) {
+    while ((pos = addr.find('.')) != string::npos) {
         addr.replace(pos, 1, ",");
     }
 #if false
@@ -373,7 +382,7 @@ bool FTP::isPortReserved(uint16_t port) {
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         return true;
     }
-    struct sockaddr_in sockAddr;
+    struct sockaddr_in sockAddr{};
     memset(&sockAddr, 0, sizeof(sockAddr));
     sockAddr.sin_family = AF_INET;
     inet_pton(AF_INET, DEFAULT_ADDR, &sockAddr.sin_addr);
@@ -442,11 +451,11 @@ int FTP::createThread(ThreadType threadType) {
             create_result = pthread_create(&uploadThreadHandle, nullptr, newUploadThreadWrapper, this);
             break;
         default:
-            throw new ServerException("Unknown ThreadType when creating data connection thread.");
+            throw ServerException("Unknown ThreadType when creating data connection thread.");
     }
 
     if (create_result != 0) {
-        throw new ServerException("Błąd przy próbie utworzenia wątku dla serwera, kod błędu: " + create_result);
+        throw ServerException("Błąd przy próbie utworzenia wątku dla serwera, kod błędu: " + create_result);
     } else {
 #if DEBUG
         cout << "Creted successfully " << (threadType == ThreadType::Upload ? " upload " : " download ")
@@ -684,12 +693,12 @@ void *FTP::downloadThread(void *args) {
 
 void *FTP::newUploadThreadWrapper(void *object) {
     reinterpret_cast<FTP *>(object)->uploadThread(nullptr);
-    return 0;
+    return nullptr;
 }
 
 void *FTP::newDownloadThreadWrapper(void *object) {
     reinterpret_cast<FTP *>(object)->downloadThread(nullptr);
-    return 0;
+    return nullptr;
 }
 
 /*

@@ -46,7 +46,8 @@ private:
     char transferType = 'A';
 
     string currentDirectory;
-    string getDirectoryWithSpaces(vector<string> command);
+
+    string getStringWithSpaces(vector<string> command);
 
     //PASSV command
     void sendPASSVResponse();

@@ -8,7 +8,7 @@ int currentClientNumber = 0;
 int main(int argc, char *argv[]) {
     string command;
 
-    char *serverAddr = (char *) DEFAULT_ADDR;
+    auto *serverAddr = (char *) DEFAULT_ADDR;
     int port = argc == 2 ? atoi(argv[1]) : DEFAULT_PORT;
 
     int serverThread = createServerThread(serverAddr, port);
@@ -39,9 +39,6 @@ int createServerThread(char *addr, int port) {
     return create_result;
 }
 
-void cleanRoutine(void *arg) {
-    cout << "Cleaning routine\n";
-}
 
 //strtok - rozbija string z delimiterem
 void *startServer(void *serverOpts) {
@@ -49,7 +46,7 @@ void *startServer(void *serverOpts) {
     auto *options = (server_opts *) serverOpts;
     printf("Serwer FTP działa na adresie: %s:%d\n", options->addr, options->port);
 
-    struct sockaddr_in sockAddr;
+    struct sockaddr_in sockAddr{};
     struct sockaddr_in remote{};
 
     int socketNum = socket(AF_INET, SOCK_STREAM, 0);
@@ -173,7 +170,6 @@ void *connection(void *t_data) {
         } else if (buffer[0] == 0) {
             cout << RED_TEXT("Klient z adresu " << remoteAddr << ", o deskryptorze " << client->socketDescriptor
                                                 << " się rozłączył!\n");
-            ftpClient->killDataConnectionThreads();
             keepConnection = 0;
             continue;
         } else {
@@ -187,7 +183,7 @@ void *connection(void *t_data) {
     currentClientNumber--;
     pthread_mutex_unlock(&currentClientNumber_mutex);
 
-    pthread_exit(NULL);
+    pthread_exit(nullptr);
 }
 
 
@@ -199,6 +195,9 @@ void parseCommand(string command) {
         runserver = 1;
     } else if (command.find("stop") != string::npos) {
         cout << GREEN_TEXT("Zatrzymywanie serwera.\n");
+        runserver = 0;
+    } else if (command.find("quit") != string::npos || command.find("quit") != string::npos) {
+        cout << GREEN_TEXT("Zamykanie serwera.\n");
         runserver = 0;
     } else {
         cout << RED_TEXT("Brak zdefiniowanej funkcji dla ") << WHITE_TEXT(command) << "\n";
