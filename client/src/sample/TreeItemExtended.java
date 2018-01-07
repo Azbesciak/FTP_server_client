@@ -25,6 +25,9 @@ public class TreeItemExtended<T> extends TreeItem {
         }
     }
 
+
+
+
     public String getSize() {
         return size;
     }
