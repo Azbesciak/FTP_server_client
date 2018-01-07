@@ -23,11 +23,12 @@ public class Connection implements  Runnable {
     public String message;
     public boolean mutex;
     private int port;
-    private  PrintWriter writer;
-    private BufferedReader reader;
+    public  PrintWriter writer;
+    public BufferedReader reader;
     public String command;
     public String argument;
     public TreeItem<File> fileToUpload;
+    public Socket mainSocket;
 
     public Connection(String addr,String port)
     {
@@ -125,12 +126,19 @@ public class Connection implements  Runnable {
 //        }
 
 
-    public void connect () throws IOException {
-        client = new Socket(addr, port);
-        out = client.getOutputStream();
-        in = client.getInputStream();
-        writer = new PrintWriter(out, true);
-        reader = new BufferedReader(new InputStreamReader(in));
+    public void connect ()   {
+        try {
+            client = new Socket(addr, port);
+            out = client.getOutputStream();
+            in = client.getInputStream();
+            writer = new PrintWriter(out, true);
+            reader = new BufferedReader(new InputStreamReader(in));
+        }
+        catch (IOException e)
+        {
+            System.out.println(e.getMessage());
+
+        }
     }
 
     public String list() throws IOException {
@@ -188,6 +196,10 @@ public class Connection implements  Runnable {
         message = reader.readLine();
     }
     public void stor(TreeItem<File> f) throws IOException{
+        out = mainSocket.getOutputStream();
+        in = mainSocket.getInputStream();
+        writer = new PrintWriter(out, true);
+        reader = new BufferedReader(new InputStreamReader(in));
         if(f.getValue().isDirectory()==true)
         {
             //stworz folder i wejdź w niego
@@ -217,10 +229,10 @@ public class Connection implements  Runnable {
             DataOutputStream dos = new DataOutputStream(client.getOutputStream());
             FileInputStream fis = new FileInputStream(f.getValue());
             byte[] buffer = new byte[4096];
-
             while (fis.read(buffer) > 0) {
                 dos.write(buffer);
             }
+            dos.write(-1);
             fis.close();
             dos.close();
         }

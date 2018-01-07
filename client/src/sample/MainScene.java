@@ -186,6 +186,7 @@ public class MainScene {
         String port = passiveModePort();
         String addr = connection.addr;
         Connection uploadConnection = new Connection(addr,port);
+        uploadConnection.mainSocket = connection.client;
         uploadConnection.connect();
 //        uploadConnection.command="MODE";
 //        uploadConnection.argument=group.getSelectedToggle().getUserData().toString();
