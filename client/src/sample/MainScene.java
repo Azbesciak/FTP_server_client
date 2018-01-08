@@ -70,6 +70,7 @@ public class MainScene {
             connection.command = "CONNECT";
             connection.connect();
             validate();
+            if(checkServerCapacity()==true)return;
             establishTrasnferConnection(); //utwórz połączenie do transferu plików
             validate();
             connection.command = "LIST";
@@ -162,12 +163,23 @@ public class MainScene {
 
     //sprawdza czy Socket został utworzony
     public void validate() throws IOException {
-        if(connection.message =="ERROR")
+        if(connection.message =="ERROR" || connection.message.charAt(0)=='5')
         {
             showError("Nie nawiązano połączenia");
             throw new IOException();
         }
     }
+
+    public boolean checkServerCapacity()
+    {
+        if(connection.message.charAt(0)=='5')
+        {
+            showError("Serwer przepełniony");
+            return true;
+        }
+        return false;
+    }
+
     //sprawdza czy serwer jest nadal aktywny
     public boolean checkConnecionStatus() throws IOException {
         try {
@@ -184,7 +196,6 @@ public class MainScene {
         }
         catch(IOException e)
         {
-            System.out.println("Brak polaczenia");
             return true;
         }
         return false;
@@ -283,26 +294,26 @@ public class MainScene {
 
 
     //uzyskuje port na którym będą przesyłane pliki
-    public String passiveModePort() throws InterruptedException, IOException {
+    public void passiveModePort() throws InterruptedException, IOException {
         connection.command="PASV";
         Thread thread = new Thread(connection);
         thread.start();
         thread.join();
         validate();
-        String input[] = connection.message.split(" ");
-        String pom[] = input[1].split(",");
-        Integer p1= Integer.valueOf(pom[0]);
-        Integer p2= Integer.valueOf(pom[1].substring(0,pom[1].length()-1));
-        Integer port = p1*256+p2;
-        return port.toString();
+//        String input[] = connection.message.split(" ");
+//        String pom[] = input[1].split(",");
+//        Integer p1= Integer.valueOf(pom[0]);
+//        Integer p2= Integer.valueOf(pom[1].substring(0,pom[1].length()-1));
+//        Integer port = p1*256+p2;
+//        return port.toString();
 
     }
 
     //nazwiązuje polączenie do transferu plików
     public void establishTrasnferConnection() throws InterruptedException, IOException {
-        String port = passiveModePort();
-      //  passiveModePort();
-      //  String port = "10002";
+       // String port = passiveModePort();
+        passiveModePort();
+        String port = "10002";
         String addr = connection.addr;
         transferConnection  = new Connection(addr,port);
         transferConnection.mainSocket = connection.client;

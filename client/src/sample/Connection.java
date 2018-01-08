@@ -90,6 +90,7 @@ public class Connection implements  Runnable {
             writer = new PrintWriter(out, true);
             reader = new BufferedReader(new InputStreamReader(in));
             client.setSoTimeout(70);
+            message="OK";
         }
 
 
