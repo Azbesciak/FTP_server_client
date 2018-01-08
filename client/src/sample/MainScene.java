@@ -1,5 +1,6 @@
 package sample;
 
+import com.sun.org.apache.xpath.internal.SourceTree;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
@@ -9,6 +10,7 @@ import javafx.scene.control.*;
 import javafx.event.EventHandler;;
 import javafx.scene.input.MouseEvent;
 import java.io.*;
+import java.net.SocketTimeoutException;
 import java.nio.file.*;
 
 
@@ -84,6 +86,8 @@ public class MainScene {
 
                 public void handle(Event e) {
                     try {
+                        System.out.println(123);
+                            checkConnecionStatus();
                         TreeItemExtended<String> expanded = (TreeItemExtended<String>) e.getSource();
                         if (!expanded.isLeaf()) {
 
@@ -140,7 +144,11 @@ public class MainScene {
                         System.out.println(expanded.getValue());
 
                     } catch (InterruptedException e2) {
-                        //  e2.printStackTrace();
+
+                    }
+                      catch (IOException e3)
+                    {
+                        System.out.println("Połączenie przerwane");
                     }
 
                 }
@@ -166,6 +174,21 @@ public class MainScene {
         {
             throw new IOException();
         }
+    }
+
+    public void checkConnecionStatus() throws IOException {
+        try {
+            if(connection.client.getInputStream().read()==-1)
+            {
+                serverFiles.setRoot(null);
+                throw new IOException();
+
+            }
+        }
+        catch(SocketTimeoutException o)
+        {
+        }
+
     }
     public void removeServerDir() throws InterruptedException {
         String dir = RemotePath.getText();
@@ -245,7 +268,7 @@ public class MainScene {
 
     public void establishTrasnferConnection() throws InterruptedException, IOException {
         String port = passiveModePort();
-        //String port = "10002";
+     //   String port = "10002";
         String addr = connection.addr;
         transferConnection  = new Connection(addr,port);
         transferConnection.mainSocket = connection.client;
@@ -323,6 +346,8 @@ public class MainScene {
         });
 
     }
+
+
 
     public void listFolder(TreeItem<File> expanded)
     {
