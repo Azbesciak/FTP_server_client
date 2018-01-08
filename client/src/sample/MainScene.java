@@ -63,16 +63,17 @@ public class MainScene {
 
 
     @FXML
-    private void connectWithServer() {
+    private void connectWithServer() throws IOException {
 
         try {
+            disconnect();
             connection = new Connection(serverAddress.getText(), portNumber.getText());
             connection.command = "CONNECT";
             connection.connect();
             validate();
             if (checkServerCapacity() == true) return;
             establishTrasnferConnection(); //utwórz połączenie do transferu plików
-            validate();
+            validateTransferConnection();
             connection.command = "LIST";
             connection.argument = "";
             Thread thread = new Thread(connection);
@@ -147,28 +148,37 @@ public class MainScene {
 
 
         } catch (IOException e1) {
-            System.out.println("Brak polaczenia");
+            showError("Nie nawiązano połączenia");
         } catch (InterruptedException e2) {
             System.out.println("Błąd systemu");
         }
     }
 
     public void disconnect() throws IOException {
-        if (connection != null) {
-            connection.client.close();
-            connection = null;
+        if (transferConnection != null ) {
+            if(transferConnection.client!=null) {
+                transferConnection.client.close();
+                transferConnection = null;
+            }
         }
-        if (transferConnection != null) {
-            transferConnection.client.close();
-            transferConnection = null;
+        if ( connection!=null  ) {
+            if(connection.client!=null) {
+                connection.client.close();
+                connection = null;
+            }
         }
     }
 
 
     //sprawdza czy Socket został utworzony
     public void validate() throws IOException {
-        if (connection.message == "ERROR" || connection.message.charAt(0) == '5') {
-            showError("Nie nawiązano połączenia");
+        if (connection.message == "ERROR" || connection==null) {
+            throw new IOException();
+        }
+    }
+
+    public void validateTransferConnection() throws IOException {
+        if (transferConnection.message == "ERROR" || transferConnection==null) {
             throw new IOException();
         }
     }
@@ -190,6 +200,14 @@ public class MainScene {
                 throw new IOException();
 
             }
+
+            if (connection.client == null) {
+                showError("Brak połączenia ");
+                serverFiles.setRoot(null);
+                throw new IOException();
+
+            }
+
             if (connection.client.getInputStream().read() == -1) {
                 showError("Połączenie zerwane");
                 serverFiles.setRoot(null);
@@ -289,26 +307,26 @@ public class MainScene {
 
 
     //uzyskuje port na którym będą przesyłane pliki
-    public String passiveModePort() throws InterruptedException, IOException {
+    public void passiveModePort() throws InterruptedException, IOException {
         connection.command = "PASV";
         Thread thread = new Thread(connection);
         thread.start();
         thread.join();
         validate();
-        String input[] = connection.message.split(" ");
-        String pom[] = input[1].split(",");
-        Integer p1 = Integer.valueOf(pom[0]);
-        Integer p2 = Integer.valueOf(pom[1].substring(0, pom[1].length() - 1));
-        Integer port = p1 * 256 + p2;
-        return port.toString();
+//        String input[] = connection.message.split(" ");
+//        String pom[] = input[1].split(",");
+//        Integer p1 = Integer.valueOf(pom[0]);
+//        Integer p2 = Integer.valueOf(pom[1].substring(0, pom[1].length() - 1));
+//        Integer port = p1 * 256 + p2;
+//        return port.toString();
 
     }
 
     //nazwiązuje polączenie do transferu plików
     public void establishTrasnferConnection() throws InterruptedException, IOException {
-        String port = passiveModePort();
-//        passiveModePort();
-//        String port = "10002";
+       // String port = passiveModePort();
+        passiveModePort();
+        String port = "10002";
         String addr = connection.addr;
         transferConnection = new Connection(addr, port);
         transferConnection.mainSocket = connection.client;
