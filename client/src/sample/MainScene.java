@@ -41,13 +41,13 @@ public class MainScene {
 
     @FXML
     private Label connectionStatus;
+
     @FXML
 
 
-    private void initialize()
-    {
+    private void initialize() {
         files.setRoot(getRootDir()); //zainicjuj lokalne drzewo plików
-        group=new ToggleGroup();
+        group = new ToggleGroup();
         binary.setToggleGroup(group);
         binary.setUserData("BINARY");
         ascii.setToggleGroup(group);
@@ -57,21 +57,20 @@ public class MainScene {
     }
 
 
-    public MainScene()
-    {
+    public MainScene() {
 
     }
 
 
     @FXML
-    private void connectWithServer()   {
+    private void connectWithServer() {
 
         try {
             connection = new Connection(serverAddress.getText(), portNumber.getText());
             connection.command = "CONNECT";
             connection.connect();
             validate();
-            if(checkServerCapacity()==true)return;
+            if (checkServerCapacity() == true) return;
             establishTrasnferConnection(); //utwórz połączenie do transferu plików
             validate();
             connection.command = "LIST";
@@ -86,7 +85,7 @@ public class MainScene {
 
                 public void handle(Event e) {
                     try {
-                            if(checkConnecionStatus()==true)return;
+                        if (checkConnecionStatus() == true) return;
                         TreeItemExtended<String> expanded = (TreeItemExtended<String>) e.getSource();
                         if (!expanded.isLeaf()) {
 
@@ -139,9 +138,7 @@ public class MainScene {
 
                     } catch (InterruptedException e2) {
 
-                    }
-                      catch (IOException e3)
-                    {
+                    } catch (IOException e3) {
                         System.out.println("Połączenie przerwane");
                     }
 
@@ -149,45 +146,35 @@ public class MainScene {
             });
 
 
-        }
-
-        catch (IOException e1)
-        {
+        } catch (IOException e1) {
             System.out.println("Brak polaczenia");
-        }
-        catch (InterruptedException e2)
-        {
+        } catch (InterruptedException e2) {
             System.out.println("Błąd systemu");
         }
     }
 
     public void disconnect() throws IOException {
-        if(connection!=null)
-        {
+        if (connection != null) {
             connection.client.close();
             connection = null;
         }
-        if(transferConnection!=null)
-        {
+        if (transferConnection != null) {
             transferConnection.client.close();
-            transferConnection=null;
+            transferConnection = null;
         }
     }
 
 
     //sprawdza czy Socket został utworzony
     public void validate() throws IOException {
-        if(connection.message =="ERROR" || connection.message.charAt(0)=='5')
-        {
+        if (connection.message == "ERROR" || connection.message.charAt(0) == '5') {
             showError("Nie nawiązano połączenia");
             throw new IOException();
         }
     }
 
-    public boolean checkServerCapacity()
-    {
-        if(connection.message.charAt(0)=='5')
-        {
+    public boolean checkServerCapacity() {
+        if (connection.message.charAt(0) == '5') {
             showError("Serwer przepełniony");
             return true;
         }
@@ -197,89 +184,78 @@ public class MainScene {
     //sprawdza czy serwer jest nadal aktywny
     public boolean checkConnecionStatus() throws IOException {
         try {
-            if(connection==null)
-            {
+            if (connection == null) {
                 showError("Brak połączenia ");
                 serverFiles.setRoot(null);
                 throw new IOException();
 
             }
-            if(connection.client.getInputStream().read()==-1)
-            {
+            if (connection.client.getInputStream().read() == -1) {
                 showError("Połączenie zerwane");
                 serverFiles.setRoot(null);
                 throw new IOException();
 
             }
-        }
-        catch(SocketTimeoutException o)
-        {
-        }
-        catch(IOException e)
-        {
+        } catch (SocketTimeoutException o) {
+        } catch (IOException e) {
             return true;
         }
         return false;
 
     }
 
-    public void showError(String s)
-    {
+    public void showError(String s) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Błąd");
         alert.setHeaderText(null);
         alert.setContentText(s);
         alert.showAndWait();
     }
+
     public void removeServerDir() throws InterruptedException, IOException {
 
-            if(checkConnecionStatus()==true)return;
-            String dir = RemotePath.getText();
-            connection.command = "RMD";
-            connection.argument = dir;
-            Thread thread = new Thread(connection);
-            thread.start();
-            thread.join();
-            if (connection.message.charAt(0) == '2') {
-                activeNode.getParent().setExpanded(false);
-                activeNode.getParent().setExpanded(true);
-            }
-            else
-            {
-                showError(connection.message);
-            }
+        if (checkConnecionStatus() == true) return;
+        String dir = RemotePath.getText();
+        connection.command = "RMD";
+        connection.argument = dir;
+        Thread thread = new Thread(connection);
+        thread.start();
+        thread.join();
+        if (connection.message.charAt(0) == '2') {
+            activeNode.getParent().setExpanded(false);
+            activeNode.getParent().setExpanded(true);
+        } else {
+            showError(connection.message);
         }
+    }
 
 
     @FXML
     public void makeServerDir() throws InterruptedException, IOException {
-        if(checkConnecionStatus()==true)return;
+        if (checkConnecionStatus() == true) return;
         String dir = RemotePath.getText();
-        connection.command="MKD";
-        connection.argument=dir;
+        connection.command = "MKD";
+        connection.argument = dir;
         Thread thread = new Thread(connection);
         thread.start();
         thread.join();
-        if(connection.message.charAt(0)=='2') {
+        if (connection.message.charAt(0) == '2') {
             activeNode.setExpanded(false);
             activeNode.setExpanded(true);
-        }
-        else
-        {
+        } else {
             showError(connection.message);
         }
     }
 
     public void upload() throws InterruptedException, IOException {
-        if(checkConnecionStatus()==true)return;
+        if (checkConnecionStatus() == true) return;
         chooseTransferMode();
         transferConnection.fileToUpload = selectedLocalFile;
-        transferConnection.command="STOR";
+        transferConnection.command = "STOR";
         Thread thread = new Thread(transferConnection);
         thread.start();
         thread.join();
-        if(connection.message=="ERROR")
-        {
+        if (connection.message == "ERROR") {
             showError("Błąd transferu danych");
         }
         activeNode.setExpanded(false);
@@ -287,45 +263,43 @@ public class MainScene {
     }
 
     public void download() throws IOException, InterruptedException {
-        if(checkConnecionStatus()==true)return;
+        if (checkConnecionStatus() == true) return;
         chooseTransferMode();
         transferConnection.fileToDownload = selectedRemoteFile;
-        transferConnection.command="RETR";
-        transferConnection.argument=fileName.getText();
+        transferConnection.command = "RETR";
+        transferConnection.argument = fileName.getText();
         transferConnection.destinationFolder = destinationFolder.getValue().toString();
         Thread thread = new Thread(transferConnection);
         thread.start();
         thread.join();
-        if(connection.message=="ERROR")
-        {
+        if (connection.message == "ERROR") {
             showError("Błąd transferu danych");
         }
         listFolder(destinationFolder);
 
 
     }
+
     //wybiera transfer ASCII lub BINARY
     public void chooseTransferMode() throws IOException {
-        connection.command="MODE";
-        connection.argument=group.getSelectedToggle().getUserData().toString();
+        connection.command = "MODE";
+        connection.argument = group.getSelectedToggle().getUserData().toString();
         connection.setTransmissionMode();
     }
 
 
-
-
     //uzyskuje port na którym będą przesyłane pliki
     public String passiveModePort() throws InterruptedException, IOException {
-        connection.command="PASV";
+        connection.command = "PASV";
         Thread thread = new Thread(connection);
         thread.start();
         thread.join();
         validate();
         String input[] = connection.message.split(" ");
         String pom[] = input[1].split(",");
-        Integer p1= Integer.valueOf(pom[0]);
-        Integer p2= Integer.valueOf(pom[1].substring(0,pom[1].length()-1));
-        Integer port = p1*256+p2;
+        Integer p1 = Integer.valueOf(pom[0]);
+        Integer p2 = Integer.valueOf(pom[1].substring(0, pom[1].length() - 1));
+        Integer port = p1 * 256 + p2;
         return port.toString();
 
     }
@@ -336,24 +310,22 @@ public class MainScene {
 //        passiveModePort();
 //        String port = "10002";
         String addr = connection.addr;
-        transferConnection  = new Connection(addr,port);
+        transferConnection = new Connection(addr, port);
         transferConnection.mainSocket = connection.client;
         transferConnection.connect();
     }
 
-    private TreeItemExtended<String> initServerFiles(String input)
-    {
-       // String input = connection.LIST("/");
-        TreeItemExtended<String>root = new TreeItemExtended<>("F /0");
+    private TreeItemExtended<String> initServerFiles(String input) {
+        // String input = connection.LIST("/");
+        TreeItemExtended<String> root = new TreeItemExtended<>("F /0");
         root.getChildren().clear();
 
 
-        String k ="";
-        k+=(char)3; //znak ASCII 3 rozdziela pliki
+        String k = "";
+        k += (char) 3; //znak ASCII 3 rozdziela pliki
         String[] files = input.split(k);
 
-        for (String file : files)
-        {
+        for (String file : files) {
             TreeItemExtended<String> treeNode = new TreeItemExtended<>(file);
             root.getChildren().add(treeNode);
         }
@@ -361,18 +333,17 @@ public class MainScene {
     }
 
     public void listServerFiles(TreeItemExtended parent) throws InterruptedException {
-        connection.command="LIST";
-        connection.argument=parent.getValue().toString()+"/";
+        connection.command = "LIST";
+        connection.argument = parent.getValue().toString() + "/";
         Thread thread = new Thread(connection);
         thread.start();
         thread.join();
-        String k ="";
-        k+=(char)3;
+        String k = "";
+        k += (char) 3;
         String[] files = connection.message.split(k);
         parent.getChildren().removeAll();
         parent.getChildren().clear();
-        for (String file : files)
-        {
+        for (String file : files) {
             TreeItemExtended<String> treeNode = new TreeItemExtended<>(file);
             parent.getChildren().add(treeNode);
             serverFiles.refresh();
@@ -388,26 +359,20 @@ public class MainScene {
         files.getRoot().addEventHandler(TreeItem.branchExpandedEvent(), new EventHandler() {
 
             public void handle(Event e) {
-                TreeItem<File> expanded= (TreeItem<File>) e.getSource();
+                TreeItem<File> expanded = (TreeItem<File>) e.getSource();
                 listFolder(expanded);
-                }
+            }
         });
 
     }
 
 
-
-
-    public void listFolder(TreeItem<File> expanded)
-    {
-        if(!expanded.isLeaf())
-        {
+    public void listFolder(TreeItem<File> expanded) {
+        if (!expanded.isLeaf()) {
             LocalPath.setText(expanded.getValue().toString());
-            if(expanded.getValue().toString()=="Local Computer")
-            {
+            if (expanded.getValue().toString() == "Local Computer") {
                 LocalPath.setText("\\");
-            }
-            else {
+            } else {
                 expanded.getChildren().removeAll();
                 expanded.getChildren().clear();
                 File listOfFiles[] = expanded.getValue().listFiles();
@@ -417,8 +382,7 @@ public class MainScene {
                     }
                 }
             }
-            for(TreeItem<File> f : expanded.getChildren())
-            {
+            for (TreeItem<File> f : expanded.getChildren()) {
                 f.getChildren().removeAll();
                 f.getChildren().clear();
                 File listOfFiles2[] = f.getValue().listFiles();
@@ -434,22 +398,22 @@ public class MainScene {
     }
 
     //do wypisywania ścieżek w paskach
-    private void getDirectory()  {
+    private void getDirectory() {
 
-            files.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
+        files.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
 
-                @Override
-                public void changed(ObservableValue observable, Object oldValue,
-                                    Object newValue) {
+            @Override
+            public void changed(ObservableValue observable, Object oldValue,
+                                Object newValue) {
 
-                    TreeItem<File> file = (TreeItem) newValue;
-                    fileName.setText(file.getValue().toString());
-                    upload.setDisable(false);
-                    download.setDisable(true);
-                    selectedLocalFile = file;
-                }
+                TreeItem<File> file = (TreeItem) newValue;
+                fileName.setText(file.getValue().toString());
+                upload.setDisable(false);
+                download.setDisable(true);
+                selectedLocalFile = file;
+            }
 
-            });
+        });
 
         serverFiles.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
 
@@ -458,7 +422,7 @@ public class MainScene {
                                 Object newValue) {
 
                 TreeItemExtended file = (TreeItemExtended) newValue;
-                if(file!=serverFiles.getRoot() && file.getValue()!=null) {
+                if (file != serverFiles.getRoot() && file.getValue() != null) {
                     fileName.setText("/" + getDir(file) + file.getValue().toString());
                     upload.setDisable(true);
                     download.setDisable(false);
@@ -467,12 +431,11 @@ public class MainScene {
             }
 
         });
-        
+
     }
 
-    public String getDir(TreeItemExtended file)
-    {
-        String path="";
+    public String getDir(TreeItemExtended file) {
+        String path = "";
         while (file.getParent() != serverFiles.getRoot()) {
             String dir = file.getParent().getValue().toString() + "/";
             path = dir + path;
@@ -482,18 +445,16 @@ public class MainScene {
     }
 
 
-
-    private TreeItem<File> getRootDir()
-    {
+    private TreeItem<File> getRootDir() {
         TreeItem<File> root = new TreeItem<File>(new File("Local Computer"));
-        Iterable<Path> rootDirectories=FileSystems.getDefault().getRootDirectories();
-        for(Path name:rootDirectories) {
+        Iterable<Path> rootDirectories = FileSystems.getDefault().getRootDirectories();
+        for (Path name : rootDirectories) {
 
             TreeItem<File> treeNode = new TreeItem<File>(new File(name.toString()));
 
             root.getChildren().add(treeNode);
         }
-         root.setExpanded(false);
+        root.setExpanded(false);
         return root;
     }
 }
