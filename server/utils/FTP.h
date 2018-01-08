@@ -86,7 +86,8 @@ private:
 
     pthread_mutex_t tryToDownloadFile_mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_mutex_t tryToUploadFile_mutex = PTHREAD_MUTEX_INITIALIZER;
-
+    pthread_mutex_t uploadThreadActive_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t downloadThreadActive_mutex = PTHREAD_MUTEX_INITIALIZER;
 
     pthread_t downloadThreadHandle = 0;
     pthread_t uploadThreadHandle = 0;

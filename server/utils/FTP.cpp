@@ -150,9 +150,9 @@ void FTP::putFile(string filename) {
     fileToUpload = filename;
     pthread_mutex_unlock(&fileToUpload_mutex);
 
-    pthread_mutex_lock(&tryToDownloadFile_mutex);
+    pthread_mutex_lock(&tryToUploadFile_mutex);
     tryToUploadFile = true;
-    pthread_mutex_unlock(&tryToDownloadFile_mutex);
+    pthread_mutex_unlock(&tryToUploadFile_mutex);
 }
 
 void FTP::getFile(string filename) {
@@ -163,7 +163,6 @@ void FTP::getFile(string filename) {
         createThread(ThreadType::Download);
     }
 
-    //TODO mutex
     sendResponse("226 Połączenie otwarte.");
     pthread_mutex_lock(&fileToDownload_mutex);
     fileToDownload = filename;
@@ -293,12 +292,13 @@ string FTP::getStringWithSpaces(vector<string> command) {
  *
  */
 void FTP::sendPASSVResponse() {
-    //TODO mutex for socketDescriptor and activity flags
     if (uploadThreadActive || downloadThreadActive) {
         throw ServerException("500 0,0 Zmiana portu niemożliwa, port aktualnie w użyciu.");
     } else {
         if (dataConnectionSocket != 0) {
+            pthread_mutex_lock(&dataConnectionOpened_mutex);
             dataConnectionOpened = false;
+            pthread_mutex_unlock(&dataConnectionOpened_mutex);
             close(dataConnectionSocket);
         }
         //zabij watki, mozliwe, ze moga dalej sie starac otwierac poprzedni socket
@@ -316,7 +316,6 @@ void FTP::sendPASSVResponse() {
 }
 
 string FTP::getDefaultInterfaceName() {
-    //TODO mutex
     system("ip route | awk '/default/ {printf $5}' >> eth");   //get default interface
     ifstream file("eth");
     string interfaceName;
@@ -402,7 +401,6 @@ bool FTP::isPortReserved(uint16_t port) {
 }
 
 string FTP::getRandomPort() {
-    //TODO mutex
     uint16_t port;
     uint16_t p1;
     uint16_t p2;
@@ -465,16 +463,11 @@ int FTP::createThread(ThreadType threadType) {
     return create_result;
 }
 
-//TODO mutexex
-/*
- * Mutex:
- *      initialization -> when connection is not open   ->
- *      before file creation and when opening file  -> done
- */
 void *FTP::uploadThread(void *args) {
 
-    uploadThreadActive = true; //TODO mutex
-    //TODO mutex on binding
+    pthread_mutex_lock(&uploadThreadActive_mutex);
+    uploadThreadActive = true;
+    pthread_mutex_unlock(&uploadThreadActive_mutex);
     if (!dataConnectionOpened) {
         setUpSocketForDataConnection();
     }
@@ -585,13 +578,17 @@ void *FTP::uploadThread(void *args) {
 #endif
 
     }
+    pthread_mutex_lock(&uploadThreadActive_mutex);
     uploadThreadActive = false;
+    pthread_mutex_unlock(&uploadThreadActive_mutex);
     pthread_exit(nullptr);
 }
 
 void *FTP::downloadThread(void *args) {
 
-    downloadThreadActive = true; //TODO mutex
+    pthread_mutex_lock(&downloadThreadActive_mutex);
+    downloadThreadActive = true;
+    pthread_mutex_unlock(&downloadThreadActive_mutex);
     if (!dataConnectionOpened) {
         setUpSocketForDataConnection();
     }
@@ -675,7 +672,6 @@ void *FTP::downloadThread(void *args) {
     cout << "Download thread: Plik zapisany " << fileToDownload_localCopy << endl;
 #endif
     sendResponse("226 Plik odebrany.");
-    //TODO mutex on socket descriptor
     if (!uploadThreadActive) {
         //close socket only when data is not being uploaded
         //close(dataConnectionSocket);
@@ -687,7 +683,9 @@ void *FTP::downloadThread(void *args) {
 
     }
 
+    pthread_mutex_lock(&downloadThreadActive_mutex);
     downloadThreadActive = false;
+    pthread_mutex_unlock(&downloadThreadActive_mutex);
     pthread_exit(nullptr);
 }
 
@@ -706,7 +704,6 @@ void *FTP::newDownloadThreadWrapper(void *object) {
  * Adds current directory position.
  */
 void FTP::prepareFileToTransfer(string *file) {
-    //TODO mutex on fileToUpload
     Directory::slashesConverter(file);
     //remove slash at 0 position
     if ((*file)[0] == '/') {
@@ -724,6 +721,7 @@ void FTP::setUpSocketForDataConnection() {
 #if DEBUG
     cout << "Setting up socket for data connection\n";
 #endif
+    pthread_mutex_lock(&dataConnectionSocket_mutex);
     dataConnectionSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (dataConnectionSocket < 0) {
         printf("Client data connection socket. Socket error\n");
@@ -750,7 +748,11 @@ void FTP::setUpSocketForDataConnection() {
     cout << "Client " << socketDescriptor << " socket for data connection initialized. Port " << dataConnectionPort
          << " binded.\n";
 #endif
+    pthread_mutex_unlock(&dataConnectionSocket_mutex);
+    pthread_mutex_lock(&dataConnectionOpened_mutex);
     dataConnectionOpened = true;
+    pthread_mutex_unlock(&dataConnectionOpened_mutex);
+
 }
 
 void FTP::killDataConnectionThreads() {
