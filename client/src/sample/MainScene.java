@@ -183,6 +183,12 @@ public class MainScene {
     //sprawdza czy serwer jest nadal aktywny
     public boolean checkConnecionStatus() throws IOException {
         try {
+            if(connection==null)
+            {
+                showError("Brak połączenia ");
+                throw new IOException();
+
+            }
             if(connection.client.getInputStream().read()==-1)
             {
                 showError("Połączenie zerwane");

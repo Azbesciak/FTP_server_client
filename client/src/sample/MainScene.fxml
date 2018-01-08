@@ -30,12 +30,16 @@
                <TextField fx:id="serverAddress" layoutX="183.0" layoutY="28.0" prefHeight="32.0" prefWidth="130.0" promptText="adres serwera" text="127.0.1.1" />
                <TextField fx:id="portNumber" layoutX="349.0" layoutY="31.0" promptText="numer portu" text="10001" />
                <TextField fx:id="fileName" editable="false" layoutX="283.0" layoutY="200.0" prefHeight="25.0" prefWidth="241.0" />
-               <Button fx:id="download" disable="true" layoutX="373.0" layoutY="168.0" mnemonicParsing="false" onMouseClicked="#download" text="Pobierz" />
+               <Button fx:id="download" disable="true" layoutX="310.0" layoutY="168.0" mnemonicParsing="false" onMouseClicked="#download" text="Pobierz" />
                <Button fx:id="upload" disable="true" layoutX="452.0" layoutY="168.0" mnemonicParsing="false" onMouseClicked="#upload" prefHeight="25.0" prefWidth="61.0" text="Wyślij" />
                <Button fx:id="addRemoteFolder" layoutX="582.0" layoutY="140.0" mnemonicParsing="false" onMouseClicked="#makeServerDir" prefHeight="55.0" prefWidth="126.0" text="Dodaj folder" />
                <Button fx:id="deleteRemoteFolder" layoutX="735.0" layoutY="140.0" mnemonicParsing="false" onMouseClicked="#removeServerDir" prefHeight="55.0" prefWidth="114.0" text="Usuń folder" />
                <TextField fx:id="RemotePath" layoutX="590.0" layoutY="95.0" prefHeight="25.0" prefWidth="275.0" />
                <TextField fx:id="LocalPath" layoutX="18.0" layoutY="95.0" prefHeight="25.0" prefWidth="252.0" />
+               <Label layoutX="22.0" layoutY="76.0" text="Lokalna ścieżka robocza" />
+               <Label layoutX="590.0" layoutY="76.0" text="Zdalna ścieżka robocza" />
+               <Label layoutX="22.0" layoutY="220.0" text="Pliki lokalne" />
+               <Label layoutX="583.0" layoutY="220.0" text="Pliki serwera" />
             </children>
          </Pane>
          <opaqueInsets>
@@ -55,6 +59,7 @@
          <children>
             <RadioButton fx:id="ascii" layoutX="31.0" layoutY="14.0" mnemonicParsing="false" selected="true" text="ASCII" />
             <RadioButton fx:id="binary" layoutX="31.0" layoutY="39.0" mnemonicParsing="false" text="BINARY" />
+            <Label layoutX="27.0" layoutY="-8.0" text="Tryb transferu plików" />
          </children></Pane>
    </center>
 </BorderPane>
