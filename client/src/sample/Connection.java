@@ -1,19 +1,9 @@
 package sample;
 
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import javafx.collections.ObservableList;
-import javafx.fxml.FXML;
-import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeView;
-import sun.reflect.generics.tree.Tree;
-
 import java.io.*;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-
-import static java.lang.Thread.sleep;
 
 public class Connection implements  Runnable {
 
@@ -99,7 +89,7 @@ public class Connection implements  Runnable {
             in = client.getInputStream();
             writer = new PrintWriter(out, true);
             reader = new BufferedReader(new InputStreamReader(in));
-            client.setSoTimeout(125);
+            client.setSoTimeout(70);
         }
 
 
@@ -309,18 +299,18 @@ public class Connection implements  Runnable {
                 outputStream.write(mybytearray, 0, current);
             }
             outputStream.flush();
-
-
             outputStream.close();
             is.close();
             message = reader.readLine();
         }
         }
+
     public void retrPom(TreeItemExtended t) throws IOException {
         out = mainSocket.getOutputStream();
         in = mainSocket.getInputStream();
         writer = new PrintWriter(out, true);
         reader = new BufferedReader(new InputStreamReader(in));
+        //ustaw WD na serwerze poziom wyżej
         String pom[] = argument.split("/");
         String dir="";
         for(int i=0;i<pom.length-1;i++)
@@ -329,25 +319,26 @@ public class Connection implements  Runnable {
         }
         argument = dir;
         cwd();
+
         retr(t);
 
     }
 
 
 
+    //zwraca samą nazwę pliku z bezwzględnej ścieżki
     public String getFileName(TreeItem file)
     {
         String path= file.getValue().toString().replace("\\","/");
-        System.out.println("aa");
         String pom[]=path.split("/");
         String name = pom[pom.length-1];
         return name;
     }
 
+    //zwraca bezwzględna ścieżkę bez ostatniego folderu
     public String getParentDir(String file)
     {
         String path= file.replace("\\","/");
-        System.out.println("aa");
         String pom[]=path.split("/");
         String dir="";
         for(int i=0;i<pom.length-1;i++)

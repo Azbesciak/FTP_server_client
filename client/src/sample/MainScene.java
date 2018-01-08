@@ -1,14 +1,11 @@
 package sample;
 
-import com.sun.org.apache.xpath.internal.SourceTree;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.event.EventHandler;;
-import javafx.scene.input.MouseEvent;
 import java.io.*;
 import java.net.SocketTimeoutException;
 import java.nio.file.*;
@@ -48,14 +45,14 @@ public class MainScene {
 
     private void initialize()
     {
-        files.setRoot(getRootDir());
+        files.setRoot(getRootDir()); //zainicjuj lokalne drzewo plików
         group=new ToggleGroup();
         binary.setToggleGroup(group);
         binary.setUserData("BINARY");
         ascii.setToggleGroup(group);
         ascii.setUserData("ASCII");
-        listFiles();
-        getDirectory();
+        listFiles(); //dodaj obsługę przeszukiwania lokalnego drzewa
+        getDirectory(); //dodaj obsługę wybierania folderu
     }
 
 
@@ -73,7 +70,7 @@ public class MainScene {
             connection.command = "CONNECT";
             connection.connect();
             validate();
-            establishTrasnferConnection();
+            establishTrasnferConnection(); //utwórz połączenie do transferu plików
             validate();
             connection.command = "LIST";
             connection.argument = "";
@@ -82,12 +79,12 @@ public class MainScene {
             thread.join();
             serverFiles.setRoot(initServerFiles(connection.message));
             activeNode = (TreeItemExtended) serverFiles.getRoot();
+            //przechodzenie po plikach serwera
             serverFiles.getRoot().addEventHandler(TreeItemExtended.branchExpandedEvent(), new EventHandler() {
 
                 public void handle(Event e) {
                     try {
-                        System.out.println(123);
-                            checkConnecionStatus();
+                            if(checkConnecionStatus()==true)return;
                         TreeItemExtended<String> expanded = (TreeItemExtended<String>) e.getSource();
                         if (!expanded.isLeaf()) {
 
@@ -96,7 +93,6 @@ public class MainScene {
                                 listServerFiles(expanded);
                                 connection.command = "CWD";
                                 connection.argument = "/" + getDir(expanded) + expanded.getValue();
-                                System.out.println("TERAZ: " + connection.argument);
                                 Thread thread = new Thread(connection);
                                 thread.start();
 
@@ -109,14 +105,12 @@ public class MainScene {
                                 connection.command = "CWD";
 
                                 connection.argument = "/" + getDir(expanded);
-                                System.out.println("Sciezka: " + connection.argument);
                                 RemotePath.setText(connection.argument + expanded.getValue() + "/");
                                 Thread thread = new Thread(connection);
                                 thread.start();
 
                                 thread.join();
                                 //activeNode = (TreeItemExtended) expanded.getParent();
-                                System.out.println(activeNode);
                                 listServerFiles(expanded);
                                 connection.command = "CWD";
                                 connection.argument = expanded.getValue().toString();
@@ -133,7 +127,6 @@ public class MainScene {
                                 thread.start();
                                 thread.join();
                                 activeNode = expanded;
-                                System.out.println(activeNode);
                                 listServerFiles(expanded);
                                 RemotePath.setText("/");
 
@@ -141,7 +134,6 @@ public class MainScene {
                             }
                         }
 
-                        System.out.println(expanded.getValue());
 
                     } catch (InterruptedException e2) {
 
@@ -168,18 +160,20 @@ public class MainScene {
     }
 
 
-
+    //sprawdza czy Socket został utworzony
     public void validate() throws IOException {
         if(connection.message =="ERROR")
         {
+            showError("Nie nawiązano połączenia");
             throw new IOException();
         }
     }
-
-    public void checkConnecionStatus() throws IOException {
+    //sprawdza czy serwer jest nadal aktywny
+    public boolean checkConnecionStatus() throws IOException {
         try {
             if(connection.client.getInputStream().read()==-1)
             {
+                showError("Połączenie zerwane");
                 serverFiles.setRoot(null);
                 throw new IOException();
 
@@ -188,23 +182,46 @@ public class MainScene {
         catch(SocketTimeoutException o)
         {
         }
+        catch(IOException e)
+        {
+            System.out.println("Brak polaczenia");
+            return true;
+        }
+        return false;
 
     }
-    public void removeServerDir() throws InterruptedException {
-        String dir = RemotePath.getText();
-        System.out.println(dir);
-        connection.command="RMD";
-        connection.argument=dir;
-        Thread thread = new Thread(connection);
-        thread.start();
-        thread.join();
-        if(connection.message.charAt(0)=='2') {
-            activeNode.getParent().setExpanded(false);
-            activeNode.getParent().setExpanded(true);
-        }
+
+    public void showError(String s)
+    {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Błąd");
+        alert.setHeaderText(null);
+        alert.setContentText(s);
+        alert.showAndWait();
     }
+    public void removeServerDir() throws InterruptedException, IOException {
+
+            if(checkConnecionStatus()==true)return;
+            String dir = RemotePath.getText();
+            connection.command = "RMD";
+            connection.argument = dir;
+            Thread thread = new Thread(connection);
+            thread.start();
+            thread.join();
+            if (connection.message.charAt(0) == '2') {
+                activeNode.getParent().setExpanded(false);
+                activeNode.getParent().setExpanded(true);
+            }
+            else
+            {
+                showError(connection.message);
+            }
+        }
+
+
     @FXML
-    public void makeServerDir() throws  InterruptedException{
+    public void makeServerDir() throws InterruptedException, IOException {
+        if(checkConnecionStatus()==true)return;
         String dir = RemotePath.getText();
         connection.command="MKD";
         connection.argument=dir;
@@ -215,20 +232,30 @@ public class MainScene {
             activeNode.setExpanded(false);
             activeNode.setExpanded(true);
         }
+        else
+        {
+            showError(connection.message);
+        }
     }
 
     public void upload() throws InterruptedException, IOException {
+        if(checkConnecionStatus()==true)return;
         chooseTransferMode();
         transferConnection.fileToUpload = selectedLocalFile;
         transferConnection.command="STOR";
         Thread thread = new Thread(transferConnection);
         thread.start();
         thread.join();
+        if(connection.message=="ERROR")
+        {
+            showError("Błąd transferu danych");
+        }
         activeNode.setExpanded(false);
         activeNode.setExpanded(true);
     }
 
     public void download() throws IOException, InterruptedException {
+        if(checkConnecionStatus()==true)return;
         chooseTransferMode();
         transferConnection.fileToDownload = selectedRemoteFile;
         transferConnection.command="RETR";
@@ -237,11 +264,15 @@ public class MainScene {
         Thread thread = new Thread(transferConnection);
         thread.start();
         thread.join();
+        if(connection.message=="ERROR")
+        {
+            showError("Błąd transferu danych");
+        }
         listFolder(destinationFolder);
 
 
     }
-
+    //wybiera transfer ASCII lub BINARY
     public void chooseTransferMode() throws IOException {
         connection.command="MODE";
         connection.argument=group.getSelectedToggle().getUserData().toString();
@@ -251,6 +282,7 @@ public class MainScene {
 
 
 
+    //uzyskuje port na którym będą przesyłane pliki
     public String passiveModePort() throws InterruptedException, IOException {
         connection.command="PASV";
         Thread thread = new Thread(connection);
@@ -266,14 +298,17 @@ public class MainScene {
 
     }
 
+    //nazwiązuje polączenie do transferu plików
     public void establishTrasnferConnection() throws InterruptedException, IOException {
         String port = passiveModePort();
-     //   String port = "10002";
+      //  passiveModePort();
+      //  String port = "10002";
         String addr = connection.addr;
         transferConnection  = new Connection(addr,port);
         transferConnection.mainSocket = connection.client;
         transferConnection.connect();
     }
+
     private TreeItemExtended<String> initServerFiles(String input)
     {
        // String input = connection.LIST("/");
@@ -282,7 +317,7 @@ public class MainScene {
 
 
         String k ="";
-        k+=(char)3;
+        k+=(char)3; //znak ASCII 3 rozdziela pliki
         String[] files = input.split(k);
 
         for (String file : files)
@@ -316,25 +351,6 @@ public class MainScene {
 
     public final String rootDir = "ftp_client_root_dir\\";
 
-    private void listDirectoryFiles(String directory)
-            throws RuntimeException {
-
-        File dir = new File(rootDir + directory);
-        System.out.println(dir.getAbsolutePath());
-        if (!dir.exists() || !dir.isDirectory())
-            throw new RuntimeException("Podana ścieżka nie jest folderem");
-        Path path = Paths.get(dir.getAbsolutePath());
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)) {
-            for (Path file : stream) {
-                System.out.println(file.getFileName());
-            }
-        } catch (IOException | DirectoryIteratorException x) {
-            // IOException can never be thrown by the iteration.
-            // In this snippet, it can only be thrown by newDirectoryStream.
-            System.err.println(x);
-        }
-    }
-
     private void listFiles() {
 
         files.getRoot().addEventHandler(TreeItem.branchExpandedEvent(), new EventHandler() {
@@ -346,6 +362,7 @@ public class MainScene {
         });
 
     }
+
 
 
 
@@ -384,6 +401,7 @@ public class MainScene {
         }
     }
 
+    //do wypisywania ścieżek w paskach
     private void getDirectory()  {
 
             files.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
@@ -394,7 +412,6 @@ public class MainScene {
 
                     TreeItem<File> file = (TreeItem) newValue;
                     fileName.setText(file.getValue().toString());
-                    System.out.println(file.getValue().toString());
                     upload.setDisable(false);
                     download.setDisable(true);
                     selectedLocalFile = file;
