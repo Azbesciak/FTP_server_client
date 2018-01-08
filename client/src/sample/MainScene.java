@@ -28,6 +28,7 @@ public class MainScene {
     public TreeView serverFiles;
     public RadioButton ascii;
     public RadioButton binary;
+    public Button disconnect;
     private ToggleGroup group;
     @FXML
     private Button connect;
@@ -160,6 +161,19 @@ public class MainScene {
         }
     }
 
+    public void disconnect() throws IOException {
+        if(connection!=null)
+        {
+            connection.client.close();
+            connection = null;
+        }
+        if(transferConnection!=null)
+        {
+            transferConnection.client.close();
+            transferConnection=null;
+        }
+    }
+
 
     //sprawdza czy Socket został utworzony
     public void validate() throws IOException {
@@ -186,6 +200,7 @@ public class MainScene {
             if(connection==null)
             {
                 showError("Brak połączenia ");
+                serverFiles.setRoot(null);
                 throw new IOException();
 
             }

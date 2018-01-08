@@ -40,6 +40,7 @@
                <Label layoutX="590.0" layoutY="76.0" text="Zdalna ścieżka robocza" />
                <Label layoutX="22.0" layoutY="220.0" text="Pliki lokalne" />
                <Label layoutX="583.0" layoutY="220.0" text="Pliki serwera" />
+               <Button fx:id="disconnect" layoutX="680.0" layoutY="20.0" mnemonicParsing="false" onMouseClicked="#disconnect" prefHeight="47.0" prefWidth="146.0" text="Rozłącz" />
             </children>
          </Pane>
          <opaqueInsets>
