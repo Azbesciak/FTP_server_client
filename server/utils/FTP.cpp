@@ -120,6 +120,9 @@ void FTP::parseCommand(string command) {
         string filename = getNameWithSpaces(splittedCommand);
         getFile(filename);
 
+    } else if (splittedCommand[0].find("STATUS") != string::npos) {
+        sendResponse("200 OK.");
+
     } else {
         throw ServerException("500 Komenda nierozpoznana.");
     }
@@ -291,7 +294,7 @@ string FTP::getStringWithSpaces(vector<string> command) {
 
 string FTP::getNameWithSpaces(vector<string> command) {
     string name = "";
-    for (int i = 1; i < command.size(); i++) {
+    for (uint i = 1; i < command.size(); i++) {
         name += command[i];
         if (i < command.size() - 1) {
             name += ' ';
