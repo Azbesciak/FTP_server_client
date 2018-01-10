@@ -1,5 +1,6 @@
 package sample;
 
+import com.sun.deploy.util.SystemUtils;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
 
@@ -26,6 +27,7 @@ public class Connection implements Runnable {
     public Socket mainSocket;
     public TreeItemExtended fileToDownload;
     public String destinationFolder;
+    public char splitFullPathChar;
 
 
     public Connection(String addr, String port) {
@@ -93,6 +95,8 @@ public class Connection implements Runnable {
         reader = new BufferedReader(new InputStreamReader(in));
         client.setSoTimeout(2000);
         message = "OK";
+        setSplitFullPathChar();
+
 
     }
 
@@ -188,8 +192,6 @@ public class Connection implements Runnable {
                 client = new Socket(addr, port);
             }
 
-
-            if (f.getValue().canRead() && f.getValue().canExecute()  && f.getValue().canWrite()) {
                 command = "STOR " + getFileName(f);
                 writer.println(command);
                 message = reader.readLine();
@@ -216,7 +218,7 @@ public class Connection implements Runnable {
                     throw new IllegalAccessException();
 
                 }
-            }
+
         }
 
     }
@@ -225,7 +227,8 @@ public class Connection implements Runnable {
 
         if (f.getChildren().size() != 0) {
             //jeśli pobieramy folder to utwórz lokalnie folder o takiej samej nazwie
-            File folder = new File(destinationFolder + "\\" + getFileName(f));
+            File folder = new File(destinationFolder + splitFullPathChar + getFileName(f)); //Windows
+           // File folder = new File(destinationFolder + "/" + getFileName(f)); //Linux
             folder.mkdir();
             destinationFolder = folder.getAbsolutePath();
             //wejdź do niego a następnie przeszukaj dzieci na serwerze
@@ -246,6 +249,7 @@ public class Connection implements Runnable {
             }
             argument = f.getValue().toString();
             cwd();
+
 
 
             //wywołaj metodę dla wszystkich dzieci
@@ -286,7 +290,7 @@ public class Connection implements Runnable {
                 emptyFile = true;
             }
             try {
-                String path = destinationFolder + "\\" + getFileName(f);
+                String path = destinationFolder + splitFullPathChar + getFileName(f);
                 File downloadFile = new File(path);
                 OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(downloadFile));
                 InputStream is = client.getInputStream();
@@ -343,7 +347,7 @@ public class Connection implements Runnable {
 
     //zwraca samą nazwę pliku z bezwzględnej ścieżki
     public String getFileName(TreeItem file) {
-        String path = file.getValue().toString().replace("\\", "/");
+        String path = file.getValue().toString().replace(splitFullPathChar, '/');
         String pom[] = path.split("/");
         String name = pom[pom.length - 1];
         return name;
@@ -351,7 +355,7 @@ public class Connection implements Runnable {
 
     //zwraca bezwzględna ścieżkę bez ostatniego folderu
     public String getParentDir(String file) {
-        String path = file.replace("\\", "/");
+        String path = file.replace(splitFullPathChar, '/');
         String pom[] = path.split("/");
         String dir = "";
         for (int i = 0; i < pom.length - 1; i++) {
@@ -359,6 +363,19 @@ public class Connection implements Runnable {
         }
         return dir;
     }
+
+    public void setSplitFullPathChar()
+    {
+        if(System.getProperty("os.name").contains("Windows"))
+        {
+            splitFullPathChar='\\';
+        }
+        else
+        {
+            splitFullPathChar='/';
+        }
+    }
+
 }
 
 

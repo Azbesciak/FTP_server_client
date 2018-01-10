@@ -25,9 +25,9 @@ public class Heartbeat implements Runnable{
     public void  run(){
         while(true)
         {
-            isConnected=false;
             writer.println("STATUS");
             try {
+                isConnected=false;
                 message =(reader.readLine());
                 isConnected=true;
                 TimeUnit.MILLISECONDS.sleep(1000);
