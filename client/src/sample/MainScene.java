@@ -7,6 +7,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.event.EventHandler;;
 import java.io.*;
+import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.file.*;
 
@@ -38,6 +39,7 @@ public class MainScene {
     public TreeItem destinationFolder;
     private Connection connection;
     private Connection transferConnection;
+    public Heartbeat heartbeat;
 
     @FXML
     private Label connectionStatus;
@@ -79,6 +81,9 @@ public class MainScene {
             Thread thread = new Thread(connection);
             thread.start();
             thread.join();
+            heartbeat = new Heartbeat(connection.out,connection.in);
+            Thread heartBeatThread = new Thread(heartbeat);
+            heartBeatThread.start(); //wątek do sprawdzania czy serwer jest dostępny
             serverFiles.setRoot(initServerFiles(connection.message));
             activeNode = (TreeItemExtended) serverFiles.getRoot();
             //przechodzenie po plikach serwera
@@ -86,7 +91,7 @@ public class MainScene {
 
                 public void handle(Event e) {
                     try {
-                       // if (checkConnecionStatus() == true) return;
+                        if(checkConnecionStatus()==true)return;
                         TreeItemExtended<String> expanded = (TreeItemExtended<String>) e.getSource();
                         if (!expanded.isLeaf()) {
 
@@ -139,10 +144,7 @@ public class MainScene {
 
                     } catch (InterruptedException e2) {
 
-                   } //catch (IOException e3) {
-//                        System.out.println("Połączenie przerwane");
-//                    }
-
+                   }
                 }
             });
 
@@ -179,6 +181,7 @@ public class MainScene {
 
     public void validateTransferConnection() throws IOException {
         if (transferConnection.message == "ERROR" || transferConnection==null) {
+            showError("Nie nawiązano połączenia");
             throw new IOException();
         }
     }
@@ -192,30 +195,23 @@ public class MainScene {
     }
 
     //sprawdza czy serwer jest nadal aktywny
-    public boolean checkConnecionStatus() throws IOException {
-        try {
+    public boolean checkConnecionStatus()  {
             if (connection == null) {
                 showError("Brak połączenia ");
                 serverFiles.setRoot(null);
-                throw new IOException();
+                return true;
 
             }
 
             if (connection.client == null) {
                 showError("Brak połączenia ");
                 serverFiles.setRoot(null);
-                throw new IOException();
+                return true;
 
             }
-
-            if (connection.client.getInputStream().read() == -1) {
-                showError("Połączenie zerwane");
-                serverFiles.setRoot(null);
-                throw new IOException();
-
-            }
-        } catch (SocketTimeoutException o) {
-        } catch (IOException e) {
+        if( heartbeat.getIsConnected() == false || heartbeat.message==null) {
+            showError("Połączenie zerwane");
+            serverFiles.setRoot(null);
             return true;
         }
         return false;
@@ -273,7 +269,7 @@ public class MainScene {
         Thread thread = new Thread(transferConnection);
         thread.start();
         thread.join();
-        if (transferConnection.message == "ERROR") {
+        if (transferConnection.message == "ERROR2") {
             showError("Błąd transferu danych");
             return;
         }
@@ -291,7 +287,7 @@ public class MainScene {
         Thread thread = new Thread(transferConnection);
         thread.start();
         thread.join();
-        if (transferConnection.message == "ERROR") {
+        if (transferConnection.message == "ERROR2") {
             showError("Błąd transferu danych");
             return;
         }
@@ -326,7 +322,7 @@ public class MainScene {
 
     //nazwiązuje polączenie do transferu plików
     public void establishTrasnferConnection() throws InterruptedException, IOException {
-        String port = passiveModePort();
+       String port = passiveModePort();
 //        passiveModePort();
 //        String port = "10002";
         String addr = connection.addr;
