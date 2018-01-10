@@ -95,14 +95,17 @@ private:
     string fileToDownload;
     int createThread(ThreadType threadType);
     void *uploadThread(void *args);
+    static void release_thread(void *);
     void *downloadThread(void *args);
     //wrappers to threads
-    static void* newUploadThreadWrapper(void *object);
+    static void *newUploadThreadWrapper(void *object);
     static void *newDownloadThreadWrapper(void *object);
 
     void prepareFileToTransfer(string *file);
 
     void setUpSocketForDataConnection();
+
+    string getNameWithSpaces(vector<string> command);
 };
 
 
