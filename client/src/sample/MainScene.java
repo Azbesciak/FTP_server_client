@@ -63,7 +63,7 @@ public class MainScene {
 
 
     @FXML
-    private void connectWithServer() throws IOException {
+    private void connectWithServer() {
 
         try {
             disconnect();
@@ -86,7 +86,7 @@ public class MainScene {
 
                 public void handle(Event e) {
                     try {
-                        if (checkConnecionStatus() == true) return;
+                       // if (checkConnecionStatus() == true) return;
                         TreeItemExtended<String> expanded = (TreeItemExtended<String>) e.getSource();
                         if (!expanded.isLeaf()) {
 
@@ -139,9 +139,9 @@ public class MainScene {
 
                     } catch (InterruptedException e2) {
 
-                    } catch (IOException e3) {
-                        System.out.println("Połączenie przerwane");
-                    }
+                   } //catch (IOException e3) {
+//                        System.out.println("Połączenie przerwane");
+//                    }
 
                 }
             });
@@ -273,8 +273,9 @@ public class MainScene {
         Thread thread = new Thread(transferConnection);
         thread.start();
         thread.join();
-        if (connection.message == "ERROR") {
+        if (transferConnection.message == "ERROR") {
             showError("Błąd transferu danych");
+            return;
         }
         activeNode.setExpanded(false);
         activeNode.setExpanded(true);
@@ -290,8 +291,9 @@ public class MainScene {
         Thread thread = new Thread(transferConnection);
         thread.start();
         thread.join();
-        if (connection.message == "ERROR") {
+        if (transferConnection.message == "ERROR") {
             showError("Błąd transferu danych");
+            return;
         }
         listFolder(destinationFolder);
 
@@ -307,26 +309,26 @@ public class MainScene {
 
 
     //uzyskuje port na którym będą przesyłane pliki
-    public void passiveModePort() throws InterruptedException, IOException {
+    public String passiveModePort() throws InterruptedException, IOException {
         connection.command = "PASV";
         Thread thread = new Thread(connection);
         thread.start();
         thread.join();
         validate();
-//        String input[] = connection.message.split(" ");
-//        String pom[] = input[1].split(",");
-//        Integer p1 = Integer.valueOf(pom[0]);
-//        Integer p2 = Integer.valueOf(pom[1].substring(0, pom[1].length() - 1));
-//        Integer port = p1 * 256 + p2;
-//        return port.toString();
+        String input[] = connection.message.split(" ");
+        String pom[] = input[1].split(",");
+        Integer p1 = Integer.valueOf(pom[0]);
+        Integer p2 = Integer.valueOf(pom[1].substring(0, pom[1].length() - 1));
+        Integer port = p1 * 256 + p2;
+        return port.toString();
 
     }
 
     //nazwiązuje polączenie do transferu plików
     public void establishTrasnferConnection() throws InterruptedException, IOException {
-       // String port = passiveModePort();
-        passiveModePort();
-        String port = "10002";
+        String port = passiveModePort();
+//        passiveModePort();
+//        String port = "10002";
         String addr = connection.addr;
         transferConnection = new Connection(addr, port);
         transferConnection.mainSocket = connection.client;
@@ -358,14 +360,17 @@ public class MainScene {
         thread.join();
         String k = "";
         k += (char) 3;
-        String[] files = connection.message.split(k);
-        parent.getChildren().removeAll();
-        parent.getChildren().clear();
-        for (String file : files) {
-            TreeItemExtended<String> treeNode = new TreeItemExtended<>(file);
-            parent.getChildren().add(treeNode);
-            serverFiles.refresh();
+        String dataFromServer = connection.message;
+        if(dataFromServer.length()>2) {
+            String[] files = connection.message.split(k);
+            parent.getChildren().removeAll();
+            parent.getChildren().clear();
+            for (String file : files) {
+                TreeItemExtended<String> treeNode = new TreeItemExtended<>(file);
+                parent.getChildren().add(treeNode);
+                serverFiles.refresh();
 
+            }
         }
     }
 

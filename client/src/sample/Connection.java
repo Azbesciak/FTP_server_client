@@ -70,6 +70,8 @@ public class Connection implements Runnable {
         } catch (Exception e) {
 
             message = "ERROR";
+            System.out.println("error");
+            return;
         }
     }
 
@@ -98,10 +100,10 @@ public class Connection implements Runnable {
     public void cwd() throws IOException {
         String serverMessage = "";
         String command = "CWD " + argument;
-        System.out.println(command);
+      //  System.out.println(command);
         writer.println(command);
         serverMessage = reader.readLine();
-        System.out.println(serverMessage);
+      //  System.out.println(serverMessage);
     }
 
     public void rmd() throws IOException {
@@ -179,14 +181,15 @@ public class Connection implements Runnable {
             command = "STOR " + getFileName(f);
             writer.println(command);
             message = reader.readLine();
+            byte[] buffer = new byte[(int)f.getValue().length()];
             DataOutputStream dos = new DataOutputStream(client.getOutputStream());
-            FileInputStream fis = new FileInputStream(f.getValue());
-            byte[] buffer = new byte[4096];
-            while (fis.read(buffer) > 0) {
-                dos.write(buffer);
-            }
+            InputStream fis = new BufferedInputStream(new FileInputStream(f.getValue()));
+            fis.read(buffer,0,buffer.length);
+            dos.write(buffer,0,buffer.length);
             fis.close();
+            dos.flush();
             dos.close();
+
             message = reader.readLine();
         }
 
@@ -256,29 +259,36 @@ public class Connection implements Runnable {
                 size = "128";
                 emptyFile = true;
             }
-            String path = destinationFolder + "\\" + getFileName(f);
-            File downloadFile = new File(path);
-            OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(downloadFile));
-            InputStream is = client.getInputStream();
+            try {
+                String path = destinationFolder + "\\" + getFileName(f);
+                File downloadFile = new File(path);
+                OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(downloadFile));
+                InputStream is = client.getInputStream();
 
-            byte[] mybytearray = new byte[Integer.valueOf(size) + 128];
-            int bytesRead = is.read(mybytearray, 0, mybytearray.length);
-            int current = 0;
-            current = bytesRead;
+                byte[] mybytearray = new byte[Integer.valueOf(size) + 128];
+                int bytesRead = is.read(mybytearray, 0, mybytearray.length);
+                int current = 0;
+                current = bytesRead;
 
-            do {
-                bytesRead =
-                        is.read(mybytearray, current, (mybytearray.length - current));
-                if (bytesRead >= 0) current += bytesRead;
-            } while (bytesRead > -1);
+                do {
+                    bytesRead =
+                            is.read(mybytearray, current, (mybytearray.length - current));
+                    if (bytesRead >= 0) current += bytesRead;
+                } while (bytesRead > -1);
 
-            if (emptyFile == false) {
-                outputStream.write(mybytearray, 0, current);
+                if (emptyFile == false) {
+                    outputStream.write(mybytearray, 0, current);
+                }
+                outputStream.flush();
+                outputStream.close();
+                is.close();
+                message = reader.readLine();
             }
-            outputStream.flush();
-            outputStream.close();
-            is.close();
-            message = reader.readLine();
+            catch(IOException e)
+            {
+                message="ERROR2";
+                reader.readLine();
+            }
         }
     }
 
