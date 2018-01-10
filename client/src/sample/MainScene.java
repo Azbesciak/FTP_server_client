@@ -10,6 +10,7 @@ import java.io.*;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.file.*;
+import java.text.DecimalFormat;
 
 
 public class MainScene {
@@ -30,6 +31,7 @@ public class MainScene {
     public RadioButton ascii;
     public RadioButton binary;
     public Button disconnect;
+    public Label sizeText;
     private ToggleGroup group;
     @FXML
     private Button connect;
@@ -83,6 +85,7 @@ public class MainScene {
             thread.join();
             heartbeat = new Heartbeat(connection.out,connection.in);
             Thread heartBeatThread = new Thread(heartbeat);
+            heartBeatThread.setDaemon(true);
             heartBeatThread.start(); //wątek do sprawdzania czy serwer jest dostępny
             serverFiles.setRoot(initServerFiles(connection.message));
             activeNode = (TreeItemExtended) serverFiles.getRoot();
@@ -152,7 +155,7 @@ public class MainScene {
         } catch (IOException e1) {
             showError("Nie nawiązano połączenia");
         } catch (InterruptedException e2) {
-            System.out.println("Błąd systemu");
+            showError("Błąd systemu");
         }
     }
 
@@ -174,7 +177,7 @@ public class MainScene {
 
     //sprawdza czy Socket został utworzony
     public void validate() throws IOException {
-        if (connection.message == "ERROR" || connection==null) {
+        if (connection==null || connection.message == "ERROR") {
             throw new IOException();
         }
     }
@@ -332,7 +335,6 @@ public class MainScene {
     }
 
     private TreeItemExtended<String> initServerFiles(String input) {
-        // String input = connection.LIST("/");
         TreeItemExtended<String> root = new TreeItemExtended<>("F /0");
         root.getChildren().clear();
 
@@ -350,7 +352,7 @@ public class MainScene {
 
     public void listServerFiles(TreeItemExtended parent) throws InterruptedException {
         connection.command = "LIST";
-        connection.argument = parent.getValue().toString() + "/";
+        connection.argument = parent.getValue().toString();
         Thread thread = new Thread(connection);
         thread.start();
         thread.join();
@@ -427,6 +429,7 @@ public class MainScene {
 
                 TreeItem<File> file = (TreeItem) newValue;
                 fileName.setText(file.getValue().toString());
+                sizeText.setText(readableFileSize(file.getValue().length()));
                 upload.setDisable(false);
                 download.setDisable(true);
                 selectedLocalFile = file;
@@ -443,6 +446,7 @@ public class MainScene {
                 TreeItemExtended file = (TreeItemExtended) newValue;
                 if (file != serverFiles.getRoot() && file.getValue() != null) {
                     fileName.setText("/" + getDir(file) + file.getValue().toString());
+                    sizeText.setText(readableFileSize(Long.parseLong(file.getSize())));
                     upload.setDisable(true);
                     download.setDisable(false);
                     selectedRemoteFile = file;
@@ -451,6 +455,13 @@ public class MainScene {
 
         });
 
+    }
+
+    public static String readableFileSize(long size) {
+        if(size <= 0) return "0";
+        final String[] units = new String[] { "B", "kB", "MB", "GB", "TB" };
+        int digitGroups = (int) (Math.log10(size)/Math.log10(1024));
+        return new DecimalFormat("#,##0.#").format(size/Math.pow(1024, digitGroups)) + " " + units[digitGroups];
     }
 
     public String getDir(TreeItemExtended file) {

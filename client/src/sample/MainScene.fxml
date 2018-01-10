@@ -29,9 +29,9 @@
                <Button fx:id="connect" layoutX="524.0" layoutY="20.0" mnemonicParsing="false" onMouseClicked="#connectWithServer" prefHeight="47.0" prefWidth="146.0" text="Połącz z serwerem" />
                <TextField fx:id="serverAddress" layoutX="183.0" layoutY="28.0" prefHeight="32.0" prefWidth="130.0" promptText="adres serwera" text="127.0.1.1" />
                <TextField fx:id="portNumber" layoutX="349.0" layoutY="31.0" promptText="numer portu" text="10001" />
-               <TextField fx:id="fileName" editable="false" layoutX="283.0" layoutY="200.0" prefHeight="25.0" prefWidth="241.0" />
-               <Button fx:id="download" disable="true" layoutX="310.0" layoutY="168.0" mnemonicParsing="false" onMouseClicked="#download" text="Pobierz" />
-               <Button fx:id="upload" disable="true" layoutX="452.0" layoutY="168.0" mnemonicParsing="false" onMouseClicked="#upload" prefHeight="25.0" prefWidth="61.0" text="Wyślij" />
+               <TextField fx:id="fileName" editable="false" layoutX="319.0" layoutY="195.0" prefHeight="25.0" prefWidth="241.0" />
+               <Button fx:id="download" disable="true" layoutX="332.0" layoutY="168.0" mnemonicParsing="false" onMouseClicked="#download" text="Pobierz" />
+               <Button fx:id="upload" disable="true" layoutX="477.0" layoutY="168.0" mnemonicParsing="false" onMouseClicked="#upload" prefHeight="25.0" prefWidth="61.0" text="Wyślij" />
                <Button fx:id="addRemoteFolder" layoutX="582.0" layoutY="140.0" mnemonicParsing="false" onMouseClicked="#makeServerDir" prefHeight="55.0" prefWidth="126.0" text="Dodaj folder" />
                <Button fx:id="deleteRemoteFolder" layoutX="735.0" layoutY="140.0" mnemonicParsing="false" onMouseClicked="#removeServerDir" prefHeight="55.0" prefWidth="114.0" text="Usuń folder" />
                <TextField fx:id="RemotePath" layoutX="590.0" layoutY="95.0" prefHeight="25.0" prefWidth="275.0" />
@@ -41,6 +41,7 @@
                <Label layoutX="22.0" layoutY="220.0" text="Pliki lokalne" />
                <Label layoutX="583.0" layoutY="220.0" text="Pliki serwera" />
                <Button fx:id="disconnect" layoutX="680.0" layoutY="20.0" mnemonicParsing="false" onMouseClicked="#disconnect" prefHeight="47.0" prefWidth="146.0" text="Rozłącz" />
+               <Label fx:id="sizeText" layoutX="318.0" layoutY="220.0" text="" />
             </children>
          </Pane>
          <opaqueInsets>
@@ -58,9 +59,9 @@
    <center>
       <Pane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
          <children>
-            <RadioButton fx:id="ascii" layoutX="31.0" layoutY="14.0" mnemonicParsing="false" selected="true" text="ASCII" />
-            <RadioButton fx:id="binary" layoutX="31.0" layoutY="39.0" mnemonicParsing="false" text="BINARY" />
-            <Label layoutX="27.0" layoutY="-8.0" text="Tryb transferu plików" />
+            <RadioButton fx:id="ascii" layoutX="55.0" layoutY="41.0" mnemonicParsing="false" selected="true" text="ASCII" />
+            <RadioButton fx:id="binary" layoutX="55.0" layoutY="70.0" mnemonicParsing="false" text="BINARY" />
+            <Label layoutX="55.0" layoutY="14.0" text="Tryb transferu plików" />
          </children></Pane>
    </center>
 </BorderPane>

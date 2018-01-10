@@ -26,7 +26,7 @@ public class Heartbeat implements Runnable{
         while(true)
         {
             isConnected=false;
-            writer.println("PWD");
+            writer.println("STATUS");
             try {
                 message =(reader.readLine());
                 isConnected=true;
