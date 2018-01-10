@@ -100,7 +100,7 @@ void FTP::parseCommand(string command) {
         if (splittedCommand.size() < 2) {
             changeDirectory("/");   //brak parametru, przejdz do glownego
         } else {
-            string directory = getNameWithSpaces(splittedCommand) + '/';
+            string directory = getNameWithSpaces(splittedCommand);
             changeDirectory(directory);    //przejdz do wskazanego przez parametr
         }
     } else if (splittedCommand[0].find("PASV") != string::npos) {
