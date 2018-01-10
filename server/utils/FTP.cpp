@@ -767,7 +767,7 @@ void FTP::killDataConnectionThreads() {
         pthread_cancel(uploadThreadHandle);
     }
 
-    if (uploadThreadHandle != 0) {
+    if (downloadThreadActive != 0) {
 #if DEBUG
         cout << "Client " << socketDescriptor << " download thread killed" << endl;
 #endif
