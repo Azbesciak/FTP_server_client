@@ -4,7 +4,10 @@ import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
 
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
+import java.util.concurrent.TimeUnit;
 
 public class Connection implements Runnable {
 
@@ -23,6 +26,7 @@ public class Connection implements Runnable {
     public Socket mainSocket;
     public TreeItemExtended fileToDownload;
     public String destinationFolder;
+
 
     public Connection(String addr, String port) {
         this.addr = addr;
@@ -67,24 +71,29 @@ public class Connection implements Runnable {
 
 
 //
-        } catch (Exception e) {
+        }catch(IllegalAccessException e2)
+        {
+            message = "ERROR2";
+        }
+        catch (IOException e) {
 
             message = "ERROR";
-            System.out.println("error");
-            return;
+
         }
     }
 
 
     public void connect() throws IOException {
 
-        client = new Socket(addr, port);
+
+        client = new Socket(addr,port);
         out = client.getOutputStream();
         in = client.getInputStream();
         writer = new PrintWriter(out, true);
         reader = new BufferedReader(new InputStreamReader(in));
-        client.setSoTimeout(70);
+        client.setSoTimeout(2000);
         message = "OK";
+
     }
 
 
@@ -141,7 +150,7 @@ public class Connection implements Runnable {
         message = reader.readLine();
     }
 
-    public void stor(TreeItem<File> f) throws IOException {
+    public void stor(TreeItem<File> f) throws IOException, IllegalAccessException {
         out = mainSocket.getOutputStream();
         in = mainSocket.getInputStream();
         writer = new PrintWriter(out, true);
@@ -178,19 +187,36 @@ public class Connection implements Runnable {
             if (client.isClosed()) {
                 client = new Socket(addr, port);
             }
-            command = "STOR " + getFileName(f);
-            writer.println(command);
-            message = reader.readLine();
-            byte[] buffer = new byte[(int)f.getValue().length()];
-            DataOutputStream dos = new DataOutputStream(client.getOutputStream());
-            InputStream fis = new BufferedInputStream(new FileInputStream(f.getValue()));
-            fis.read(buffer,0,buffer.length);
-            dos.write(buffer,0,buffer.length);
-            fis.close();
-            dos.flush();
-            dos.close();
 
-            message = reader.readLine();
+
+            if (f.getValue().canRead() && f.getValue().canExecute()  && f.getValue().canWrite()) {
+                command = "STOR " + getFileName(f);
+                writer.println(command);
+                message = reader.readLine();
+                DataOutputStream dos = new DataOutputStream(client.getOutputStream());
+                FileInputStream is = new FileInputStream(f.getValue());
+                InputStream fis = new BufferedInputStream(is);
+                try {
+                    byte[] buffer = new byte[(int) f.getValue().length()];
+
+
+                    System.out.println(f.getValue().length());
+                    fis.read(buffer, 0, buffer.length);
+                    dos.write(buffer, 0, buffer.length);
+                    fis.close();
+                    dos.flush();
+                    dos.close();
+
+                    message = reader.readLine();
+                    TimeUnit.MILLISECONDS.sleep(10);
+                } catch (Exception e) {
+                    dos.flush();
+                    dos.close();
+                    is.close();
+                    throw new IllegalAccessException();
+
+                }
+            }
         }
 
     }
@@ -265,7 +291,7 @@ public class Connection implements Runnable {
                 OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(downloadFile));
                 InputStream is = client.getInputStream();
 
-                byte[] mybytearray = new byte[Integer.valueOf(size) + 128];
+                byte[] mybytearray = new byte[Integer.valueOf(size) + 1];
                 int bytesRead = is.read(mybytearray, 0, mybytearray.length);
                 int current = 0;
                 current = bytesRead;
@@ -277,14 +303,18 @@ public class Connection implements Runnable {
                 } while (bytesRead > -1);
 
                 if (emptyFile == false) {
+                    System.out.println(current);
                     outputStream.write(mybytearray, 0, current);
                 }
                 outputStream.flush();
                 outputStream.close();
                 is.close();
                 message = reader.readLine();
-            }
-            catch(IOException e)
+            } catch(FileNotFoundException e2)
+            {
+                message="ERROR3";
+                reader.readLine();
+            } catch(IOException e)
             {
                 message="ERROR2";
                 reader.readLine();
