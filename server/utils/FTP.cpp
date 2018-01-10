@@ -84,7 +84,7 @@ void FTP::parseCommand(string command) {
         if (splittedCommand.size() < 2) {
             throw ServerException("501 Brak oczekiwanego prametru.");
         }
-        string directoryToRemove = getStringWithSpaces(splittedCommand) + '/';
+        string directoryToRemove = getNameWithSpaces(splittedCommand) + '/';
         removeDirectory(directoryToRemove);
     } else if (splittedCommand[0].find("LIST") != string::npos) {
         if (splittedCommand.size() < 2) {
@@ -100,7 +100,7 @@ void FTP::parseCommand(string command) {
         if (splittedCommand.size() < 2) {
             changeDirectory("/");   //brak parametru, przejdz do glownego
         } else {
-            string directory = getNameWithSpaces(splittedCommand);
+            string directory = getNameWithSpaces(splittedCommand) + '/';
             changeDirectory(directory);    //przejdz do wskazanego przez parametr
         }
     } else if (splittedCommand[0].find("PASV") != string::npos) {
@@ -289,6 +289,9 @@ string FTP::getStringWithSpaces(vector<string> command) {
     if (directory[directory.size() - 1] == '/') {
         directory.erase(directory.size() - 1, 1);
     }
+    if (directory[directory.size() - 1] == '\\') {
+        directory.erase(directory.size() - 1, 1);
+    }
     return directory;
 }
 
@@ -299,6 +302,13 @@ string FTP::getNameWithSpaces(vector<string> command) {
         if (i < command.size() - 1) {
             name += ' ';
         }
+    }
+    //usun slash na koncu, aby funkcja byla bardziej uniwersalna - dla folderow i plikow
+    if (name[name.size() - 1] == '/') {
+        name.erase(name.size() - 1, 1);
+    }
+    if (name[name.size() - 1] == '\\') {
+        name.erase(name.size() - 1, 1);
     }
     return name;
 }
