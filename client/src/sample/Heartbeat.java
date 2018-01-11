@@ -12,6 +12,8 @@ public class Heartbeat implements Runnable{
     public PrintWriter writer;
     public BufferedReader reader;
     public String message;
+    public Connection mainConnection;
+    public boolean mutex;
 
 
     public Heartbeat(OutputStream out,InputStream in)
@@ -21,15 +23,22 @@ public class Heartbeat implements Runnable{
         writer = new PrintWriter(out, true);
         reader = new BufferedReader(new InputStreamReader(in));
         message="";
+        mutex=false;
     }
     public void  run(){
         while(true)
         {
-            writer.println("STATUS");
             try {
-                isConnected=false;
-                message =(reader.readLine());
-                isConnected=true;
+//                while(mainConnection.transferConnection.transferGoing==true){}
+//                while(mainConnection.mutex==true)
+//                {}
+//                while(mainConnection.transferConnection.mutex==true){}
+                isConnected = false;
+                mutex=true;
+                writer.println("STATUS");
+                message= reader.readLine();
+                mutex=false;
+                isConnected = true;
                 TimeUnit.MILLISECONDS.sleep(1000);
             } catch(Exception e)
             {

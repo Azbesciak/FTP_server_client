@@ -1,13 +1,11 @@
 package sample;
 
-import com.sun.deploy.util.SystemUtils;
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
-
 import java.io.*;
-import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketAddress;
+import java.net.SocketException;
 import java.util.concurrent.TimeUnit;
 
 public class Connection implements Runnable {
@@ -15,12 +13,11 @@ public class Connection implements Runnable {
     public Socket client;
     public OutputStream out;
     public InputStream in;
-    public String addr;
+    public  String addr;
     public String message;
-    public boolean mutex;
-    private int port;
-    public PrintWriter writer;
-    public BufferedReader reader;
+    private String port;
+    private PrintWriter writer;
+    private BufferedReader reader;
     public String command;
     public String argument;
     public TreeItem<File> fileToUpload;
@@ -29,10 +26,9 @@ public class Connection implements Runnable {
     public String destinationFolder;
     public char splitFullPathChar;
 
-
     public Connection(String addr, String port) {
         this.addr = addr;
-        this.port = Integer.valueOf(port);
+        this.port = port;
     }
 
     @Override
@@ -67,20 +63,16 @@ public class Connection implements Runnable {
 
             }
             if (command == "RETR") {
-
                 retrPom(fileToDownload);
             }
 
-
-//
         }catch(IllegalAccessException e2)
         {
             message = "ERROR2";
-        }
-        catch (IOException e) {
-
+        } catch (InterruptedException e) {
             message = "ERROR";
-
+        } catch (IOException e) {
+            message = "ERROR";
         }
     }
 
@@ -88,7 +80,7 @@ public class Connection implements Runnable {
     public void connect() throws IOException {
 
 
-        client = new Socket(addr,port);
+        client = new Socket(addr,Integer.valueOf(port));
         out = client.getOutputStream();
         in = client.getInputStream();
         writer = new PrintWriter(out, true);
@@ -96,16 +88,13 @@ public class Connection implements Runnable {
         client.setSoTimeout(2000);
         message = "OK";
         setSplitFullPathChar();
-
-
     }
 
 
     public String list() throws IOException {
         String serverMessage = "";
         String command = "LIST /" + argument;
-        writer.println(command);
-        serverMessage = reader.readLine();
+        serverMessage = message = writeAndRead(command);
         return serverMessage;
 
     }
@@ -113,34 +102,35 @@ public class Connection implements Runnable {
     public void cwd() throws IOException {
         String serverMessage = "";
         String command = "CWD " + argument;
-      //  System.out.println(command);
-        writer.println(command);
-        serverMessage = reader.readLine();
-      //  System.out.println(serverMessage);
+        message = writeAndRead(command);
     }
 
     public void rmd() throws IOException {
         String command = "RMD " + argument;
-        writer.println(command);
-        message = reader.readLine();
+        message = writeAndRead(command);;
     }
 
     public void mkd() throws IOException {
         String command = "MKD " + argument;
-        writer.println(command);
-        message = reader.readLine();
+        message = writeAndRead(command);
     }
 
     public void pasv() throws IOException {
         String command = "PASV";
         writer.println(command);
         message = reader.readLine();
+      //  message = writeAndRead(command);
     }
 
     public void pwd() throws IOException {
         String command = "PWD";
-        writer.println(command);
-        message = reader.readLine();
+        message = writeAndRead(command);
+    }
+
+    public void status() throws IOException {
+        String command = "STATUS";
+        message = writeAndRead(command);
+
     }
 
     public void setTransmissionMode() throws IOException {
@@ -150,11 +140,18 @@ public class Connection implements Runnable {
         } else {
             command += "I";
         }
-        writer.println(command);
-        message = reader.readLine();
+       message = writeAndRead(command);
     }
 
-    public void stor(TreeItem<File> f) throws IOException, IllegalAccessException {
+    public String writeAndRead(String command) throws IOException {
+            writer.println(command);
+                return  reader.readLine();
+    }
+
+
+
+
+    public void stor(TreeItem<File> f) throws IOException, IllegalAccessException, InterruptedException {
         out = mainSocket.getOutputStream();
         in = mainSocket.getInputStream();
         writer = new PrintWriter(out, true);
@@ -163,6 +160,7 @@ public class Connection implements Runnable {
             //stworz folder i wejdź w niego
             argument = getFileName(f);
             mkd();
+            TimeUnit.MILLISECONDS.sleep(10);
             cwd();
             f.getChildren().removeAll();
             f.getChildren().clear();
@@ -182,19 +180,23 @@ public class Connection implements Runnable {
             for (int i = 0; i < pom.length - 1; i++) {
                 dir += pom[i] + "/";
             }
-            argument = "/";
-            cwd();
-            argument = dir;
+          //  argument = "/";
+          //  cwd();
+            if(pom.length>1) {
+                argument = "/" + dir.substring(0, dir.length() - 1);
+            }
+            else {
+                argument = "/" + dir;
+            }
             cwd();
         } else {
 
             if (client.isClosed()) {
-                client = new Socket(addr, port);
+                client = new Socket(addr, Integer.valueOf(port));
             }
 
                 command = "STOR " + getFileName(f);
-                writer.println(command);
-                message = reader.readLine();
+                writeAndRead(command);
                 DataOutputStream dos = new DataOutputStream(client.getOutputStream());
                 FileInputStream is = new FileInputStream(f.getValue());
                 InputStream fis = new BufferedInputStream(is);
@@ -208,7 +210,6 @@ public class Connection implements Runnable {
                     fis.close();
                     dos.flush();
                     dos.close();
-
                     message = reader.readLine();
                     TimeUnit.MILLISECONDS.sleep(10);
                 } catch (Exception e) {
@@ -269,19 +270,18 @@ public class Connection implements Runnable {
             for (int i = 0; i < pom.length - 1; i++) {
                 dir += pom[i] + "/";
             }
-            argument = "/";
+            argument = "/"+dir;
             cwd();
-            argument = dir;
-            cwd();
+          //  argument = dir;
+           // cwd();
 
 
         } else {
             if (client.isClosed()) {
-                client = new Socket(addr, port);
+                client = new Socket(addr, Integer.valueOf(port));
             }
             command = "RETR " + getFileName(f);
-            writer.println(command);
-            message = reader.readLine();
+            writeAndRead(command);
             String size = f.getSize();
             boolean emptyFile = false;
             //jeśli plik jest pusty lub nie udało się odczytać rozmiaru ustaw domyślny rozmiar
@@ -317,7 +317,7 @@ public class Connection implements Runnable {
             } catch(FileNotFoundException e2)
             {
                 message="ERROR3";
-                reader.readLine();
+                    reader.readLine();
             } catch(IOException e)
             {
                 message="ERROR2";

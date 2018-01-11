@@ -1,5 +1,6 @@
 package sample;
 
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
@@ -42,7 +43,6 @@ public class MainScene {
     public TreeItem destinationFolder;
     private Connection connection;
     private Connection transferConnection;
-    public Heartbeat heartbeat;
 
     @FXML
     private Label connectionStatus;
@@ -84,10 +84,6 @@ public class MainScene {
             Thread thread = new Thread(connection);
             thread.start();
             thread.join();
-            heartbeat = new Heartbeat(connection.out,connection.in);
-            Thread heartBeatThread = new Thread(heartbeat);
-            heartBeatThread.setDaemon(true);
-            heartBeatThread.start(); //wątek do sprawdzania czy serwer jest dostępny
             serverFiles.setRoot(initServerFiles(connection.message));
             activeNode = (TreeItemExtended) serverFiles.getRoot();
             //przechodzenie po plikach serwera
@@ -95,7 +91,7 @@ public class MainScene {
 
                 public void handle(Event e) {
                     try {
-                        if(checkConnecionStatus()==true)return;
+                        if(checkStatus()==true)return;
                         TreeItemExtended<String> expanded = (TreeItemExtended<String>) e.getSource();
                         if (!expanded.isLeaf()) {
 
@@ -106,7 +102,6 @@ public class MainScene {
                                 connection.argument = "/" + getDir(expanded) + expanded.getValue();
                                 Thread thread = new Thread(connection);
                                 thread.start();
-
                                 thread.join();
                                 activeNode = expanded;
                                 RemotePath.setText(connection.argument + "/");
@@ -119,7 +114,6 @@ public class MainScene {
                                 RemotePath.setText(connection.argument + expanded.getValue() + "/");
                                 Thread thread = new Thread(connection);
                                 thread.start();
-
                                 thread.join();
                                 //activeNode = (TreeItemExtended) expanded.getParent();
                                 listServerFiles(expanded);
@@ -146,17 +140,22 @@ public class MainScene {
                         }
 
 
-                    } catch (InterruptedException e2) {
-
+                    } catch (Exception e2) {
+                        showError("Błąd systemu");
                    }
                 }
             });
 
 
         } catch (IOException e1) {
+            connection=null;
             showError("Nie nawiązano połączenia");
         } catch (InterruptedException e2) {
             showError("Błąd systemu");
+        } catch (Exception e) {
+
+            showError("Nie nawiązano połączenia");
+
         }
     }
 
@@ -178,13 +177,13 @@ public class MainScene {
 
     //sprawdza czy Socket został utworzony
     public void validate() throws IOException {
-        if (connection==null || connection.message == "ERROR") {
+        if (connection==null || connection.message.equals("ERROR")) {
             throw new IOException();
         }
     }
 
     public void validateTransferConnection() throws IOException {
-        if (transferConnection.message == "ERROR" || transferConnection==null) {
+        if (transferConnection==null || transferConnection.message.equals("ERROR")) {
             showError("Nie nawiązano połączenia");
             throw new IOException();
         }
@@ -199,28 +198,7 @@ public class MainScene {
     }
 
     //sprawdza czy serwer jest nadal aktywny
-    public boolean checkConnecionStatus()  {
-            if (connection == null) {
-                showError("Brak połączenia ");
-                serverFiles.setRoot(null);
-                return true;
 
-            }
-
-            if (connection.client == null) {
-                showError("Brak połączenia ");
-                serverFiles.setRoot(null);
-                return true;
-
-            }
-        if( heartbeat.getIsConnected() == false || heartbeat.message==null) {
-            showError("Połączenie zerwane");
-            serverFiles.setRoot(null);
-            return true;
-        }
-        return false;
-
-    }
 
     public void showError(String s) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -232,14 +210,15 @@ public class MainScene {
 
     public void removeServerDir() throws InterruptedException, IOException {
 
-        if (checkConnecionStatus() == true) return;
+        if (checkStatus() == true) return;
         String dir = RemotePath.getText();
         connection.command = "RMD";
         connection.argument = dir;
         Thread thread = new Thread(connection);
         thread.start();
         thread.join();
-        if (connection.message.charAt(0) == '2') {
+        if(connection.message==null)showError("Brak połączenia");
+        else if (connection.message.charAt(0) == '2') {
             activeNode.getParent().setExpanded(false);
             activeNode.getParent().setExpanded(true);
         } else {
@@ -250,14 +229,15 @@ public class MainScene {
 
     @FXML
     public void makeServerDir() throws InterruptedException, IOException {
-        if (checkConnecionStatus() == true) return;
+        if (checkStatus() == true) return;
         String dir = RemotePath.getText();
         connection.command = "MKD";
         connection.argument = dir;
         Thread thread = new Thread(connection);
         thread.start();
         thread.join();
-        if (connection.message.charAt(0) == '2') {
+        if(connection.message==null)showError("Brak połączenia");
+       else if (connection.message.charAt(0) == '2') {
             activeNode.setExpanded(false);
             activeNode.setExpanded(true);
         } else {
@@ -266,14 +246,14 @@ public class MainScene {
     }
 
     public void upload() throws InterruptedException, IOException {
-        if (checkConnecionStatus() == true) return;
+        if (checkStatus() == true) return;
         chooseTransferMode();
         transferConnection.fileToUpload = selectedLocalFile;
         transferConnection.command = "STOR";
         Thread thread = new Thread(transferConnection);
         thread.start();
         thread.join();
-        if (transferConnection.message == "ERROR2") {
+        if (transferConnection.message.equals("ERROR2")) {
             showError("Błąd transferu danych");
             return;
         }
@@ -282,7 +262,7 @@ public class MainScene {
     }
 
     public void download() throws IOException, InterruptedException {
-        if (checkConnecionStatus() == true) return;
+        if (checkStatus() == true) return;
         chooseTransferMode();
         transferConnection.fileToDownload = selectedRemoteFile;
         transferConnection.command = "RETR";
@@ -291,7 +271,7 @@ public class MainScene {
         Thread thread = new Thread(transferConnection);
         thread.start();
         thread.join();
-        if (transferConnection.message == "ERROR2") {
+        if (transferConnection.message.equals("ERROR2")) {
             showError("Błąd transferu danych");
             return;
         }
@@ -317,6 +297,11 @@ public class MainScene {
         validate();
         if(portHardCoded.isSelected()==false) {
         String input[] = connection.message.split(" ");
+        if(input[0].equals("500"))
+        {
+            showError(connection.message);
+            throw new IOException();
+        }
         String pom[] = input[1].split(",");
         Integer p1 = Integer.valueOf(pom[0]);
         Integer p2 = Integer.valueOf(pom[1].substring(0, pom[1].length() - 1));
@@ -328,11 +313,12 @@ public class MainScene {
     }
 
     //nazwiązuje polączenie do transferu plików
-    public void establishTrasnferConnection() throws InterruptedException, IOException {
+    public void establishTrasnferConnection() throws Exception {
        String port = passiveModePort();
         String addr = connection.addr;
         transferConnection = new Connection(addr, port);
         transferConnection.mainSocket = connection.client;
+        //connection.transferConnection=transferConnection;
         transferConnection.connect();
     }
 
@@ -352,7 +338,7 @@ public class MainScene {
         return root;
     }
 
-    public void listServerFiles(TreeItemExtended parent) throws InterruptedException {
+    public void listServerFiles(TreeItemExtended parent) throws InterruptedException, IOException {
         connection.command = "LIST";
         connection.argument = parent.getValue().toString();
         Thread thread = new Thread(connection);
@@ -475,6 +461,29 @@ public class MainScene {
         }
         return path;
     }
+
+    public boolean checkStatus() throws IOException {
+        if (connection == null) {
+            showError("Brak połączenia ");
+            serverFiles.setRoot(null);
+            return true;
+
+        }
+
+        if (connection.client == null) {
+            showError("Brak połączenia ");
+            serverFiles.setRoot(null);
+            return true;
+        }
+            connection.status();
+            if (connection.message == null) {
+                showError("Połączenie zerwane ");
+                serverFiles.setRoot(null);
+                return true;
+            }
+            return false;
+        }
+
 
 
     private TreeItem<File> getRootDir() {
